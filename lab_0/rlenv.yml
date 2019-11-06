@@ -1,0 +1,22 @@
+name: rl
+channels:
+- !!python/unicode
+  'defaults'
+dependencies:
+- python=3.6
+- pip
+- numpy
+- jupyter
+- matplotlib
+- scikit-learn
+- scipy
+- pandas
+- seaborn
+- h5py
+- spacy
+- unidecode
+- pip:
+  - tensorflow
+  - keras
+  - gym
+  - pillow
