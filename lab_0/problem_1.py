@@ -31,7 +31,9 @@ def get_reward(state, action):
     if new_state[0] < 0 or new_state[0] >= map.shape[0] or\
         new_state[1] < 0 or new_state[1] >= map.shape[1]:
         return float('-inf')
-    return reward_matrix[new_state]
+    if map[new_state] == 0:
+        return float('-inf')
+    return -1
 
 def get_states():
     for state, _ in np.ndenumerate(map):
@@ -42,21 +44,25 @@ if __name__ == "__main__":
     map, reward_matrix, start, goal = get_model()
     actions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
-    T = 10
+    T = 20
     Us = [reward_matrix]
-    state = goal
     for t in reversed(range(2, T)):
-        new_u = np.zeros(map.shape)
+        new_u = np.zeros(map.shape) - 5
         for state_t_1 in get_states():
+            if state_t_1 == goal:
+                continue
             max_found = float('-inf')
             for action in actions:
                 val = get_reward(state_t_1, action) #TODO(oleguer): Review this
                 for j in get_states():
-                    print(j)
                     val += trans(j, state_t_1, action)*Us[-1][j]
                 max_found = max(max_found, val)
             new_u[state_t_1] = max_found
+            new_u[goal] = 0
+        if np.array_equal(new_u, Us[-1]):
+            break
         Us.append(new_u)
+
 
     for U in Us:
         plt.imshow(U, cmap='hot', interpolation='nearest')
