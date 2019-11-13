@@ -4,7 +4,10 @@ import copy
 import random
  
 class MDP(ABC):
+    epsilon = 1e-5
+
     def __init__(self):
+        self.epsilon = 1e-5
         super().__init__()
     
     # Model methods:
@@ -27,37 +30,47 @@ class MDP(ABC):
     def get_reward(self, state, action): # Rewards
         pass
 
-    def value_iteration(self, initial_values, T = -1, discount = 0.8):
-        ''' Performs value iteration algorithm to defined MDP
-            returns list of state values after each iteration
-        '''
+    def __iteration(self, initial_values, T, gamma):
         actions = self.get_actions()
         states = self.get_states()
 
         Us = [initial_values]
-        while True:
+        tol = self.epsilon*(1 - gamma)/gamma
+
+        while T > 0:
+            T -= 1
             new_u = copy.deepcopy(Us[-1])
             for state in states:
                 max_found = float('-inf')
                 for action in actions:
                     val = self.get_reward(state, action)
                     for j in states:
-                        val += discount*\
+                        val += gamma*\
                             self.get_transition_prob(j, state, action)*Us[-1][j]
                     max_found = max(max_found, val)
                 new_u[state] = max_found
-            if np.array_equal(new_u, Us[-1]):
+            if np.linalg.norm(Us[-1] - new_u) < tol:
                 break
             Us.append(new_u)
         return Us
 
-    def get_policy(self, value_mapping, discount = 0.8):
-        #TODO: return new best policy given value_mapping
-        # obs: value mapping can either be: 
-        # np array of values with indexes as states
-        # map to state value  (more genereal)
 
-        # return: map state->action
+    def value_iteration(self, initial_values, gamma = 0.8):
+        ''' Performs value iteration algorithm to defined MDP
+            returns list of state values after each iteration
+        '''
+        Us = self.__iteration(initial_values, np.inf, gamma)
+        return Us
+
+    def dynamic_programming(self, initial_values, T):
+        ''' Performs value iteration algorithm to defined MDP
+            returns list of state values after each iteration
+        '''
+        Us = self.__iteration(initial_values, T, 1)
+        return Us
+
+    def get_policy(self, value_mapping, discount = 0.8):
+        #TODO(federico): FIX THIS NOW!!! >:-(
         pass
 
     def policy_evaluation(self, policy, discount = 1):

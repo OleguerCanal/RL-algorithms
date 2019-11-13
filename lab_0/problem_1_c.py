@@ -43,7 +43,8 @@ class Problem1C(MDP):
 
 if __name__ == "__main__":
     problem = Problem1C()
-    value_hist = problem.value_iteration(initial_values = np.zeros((6, 7)))
+    # value_hist = problem.value_iteration(initial_values = np.zeros((6, 7)))
+    value_hist = problem.dynamic_programming(initial_values = np.zeros((6, 7)), T = 10)
 
     for value in value_hist:
         plt.imshow(value, cmap='hot', interpolation='nearest')
