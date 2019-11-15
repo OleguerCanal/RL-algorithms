@@ -78,9 +78,22 @@ class MDP(ABC):
         Us = self.__iteration(initial_values, T, 1)
         return Us
 
-    def get_policy(self, value_mapping, discount = 0.8):
-        #TODO(federico): FIX THIS NOW!!! >:-(
-        pass
+    def get_policy(self, values_dict):
+        # return: map[state] = action
+        states = self.get_states()
+        action_dict = {}
+        for state in states:
+            player_pos = state[0]
+            max_found = -float('inf')
+            best_action = None
+            for action in self.get_actions(state):
+                new_pos = tuple(np.array(player_pos)+np.array(action))
+                action_val = values_dict[new_pos]
+                if action_val > max_found:
+                    max_found = action_val
+                    best_action = action
+            action_dic[state] = best_action
+        return action_dic
 
     def policy_evaluation(self, policy, discount = 1):
         # Return value mapping: map state->value
