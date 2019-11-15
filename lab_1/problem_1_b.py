@@ -16,7 +16,8 @@ class Problem1B(MDP):
         self.map[1:4, 5] = 0
         self.map[2, 6:8] = 0
 
-        self.actions = [(-1, 0), (1, 0), (0, -1), (0, 1), (0, 0)]
+        self.actions = [(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)]
+        self.goal = (6, 5)
 
     def get_states(self):
         player_states = tuple(np.swapaxes(np.where(self.map == 1), 0, 1))
@@ -26,14 +27,7 @@ class Problem1B(MDP):
         for state in states:
             tuple_states.append((tuple(state[0]), tuple(state[1])))
         return tuple_states
-
-    def get_actions(self, state):
-        possible_actions = []
-        for action in self.actions:
-            if self.__valid_action(state[0], action, player = True):
-                possible_actions.append(action)
-        return possible_actions
-
+    
     def __valid_action(self, position, action, player = True):
         next_pos = tuple(np.array(position) + np.array(action))
         if next_pos[0] < 0 or next_pos[0] >= self.map.shape[0] or\
@@ -43,25 +37,40 @@ class Problem1B(MDP):
             return False
         return True
 
+    def get_actions(self, state):
+        if state == self.goal:
+            return []
+        if (state[0] == state[1]):
+            return []
+        possible_actions = []
+        for action in self.actions:
+            if self.__valid_action(state[0], action, player = True):
+                possible_actions.append(action)
+        return possible_actions
+
     def get_transitions(self, state, action):
         player_pos = tuple(np.array(state[0]) + np.array(action))
-        if player_pos == (6, 5):
-            return None, 0
+        # if (state[0] == state[1]):
+        #     return None
+        # if player_pos == (6, 5):
+        #     return None, 0
         minotaur_positions = []
         for action in self.actions:
             if self.__valid_action(state[1], action, player=False):
                 mino_pos = tuple(np.array(state[1]) + np.array(action))
                 minotaur_positions.append(mino_pos)
-        prob = 1./len(minotaur_positions)
+        prob = 1./float(len(minotaur_positions))
+        result = []
         for mino_pos in minotaur_positions:
             new_state = (player_pos,  mino_pos)
-            yield new_state, prob
+            result.append((new_state, prob))
+        return result
 
     def get_reward(self, state, action):
         player_pos = tuple(np.array(state[0]) + np.array(action))
         new_state = (tuple(player_pos), tuple(state[1]))
         if tuple(new_state[0]) == tuple(new_state[1]):
-            return -1000
+            return -100
         if tuple(new_state[0]) == (6, 5):
             return 0
         return -1
@@ -79,9 +88,12 @@ if __name__ == "__main__":
 
     states = problem.get_states()
     initial_values = {state : 0 for state in states}
+    # for state in states:
+    #     rew = max([problem.get_reward(state, a) for a in problem.get_actions(state)])
+    #     initial_values[state] = rew
 
-    value_hist = problem.dynamic_programming(initial_values = initial_values, T = 20)
-    # value_hist = problem.value_iteration(initial_values = initial_values)
+    # value_hist = problem.dynamic_programming(initial_values = initial_values, T = 20)
+    value_hist = problem.value_iteration(initial_values = initial_values)
 
     mino_states = tuple(np.swapaxes(np.where(problem.map < 2), 0, 1))
     mino_states = [(3, 1), (2, 3), (4, 7)]

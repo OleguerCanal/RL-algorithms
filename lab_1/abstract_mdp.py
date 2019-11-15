@@ -7,7 +7,7 @@ class MDP(ABC):
     epsilon = 1e-5
 
     def __init__(self):
-        self.epsilon = 1e-5
+        self.epsilon = 1e-2
         super().__init__()
     
     # Model methods:
@@ -46,10 +46,15 @@ class MDP(ABC):
             T -= 1
             new_u = copy.deepcopy(Us[-1])
             for state in states:
-                max_found = float('-inf')
-                for action in self.get_actions(state):
+                max_found = -100
+                possible_actions = self.get_actions(state)
+                for action in possible_actions:
                     val = self.get_reward(state, action)
-                    for j, p in self.get_transitions(state, action):
+                    transitions = self.get_transitions(state, action)
+                    # print("val: " + str(val))
+                    # print("transitions: " + str(transitions))
+                    # a = input()
+                    for j, p in transitions:
                         val += gamma*p*Us[-1][j]
                     max_found = max(max_found, val)
                 new_u[state] = max_found
