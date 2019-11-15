@@ -23,15 +23,20 @@ class MDP(ABC):
         pass
 
     @abstractmethod
-    def get_transition_prob(self, next_state, state, action): # Transitions
+    def get_transitions(self, state, action): # Transitions
         pass
 
     @abstractmethod
     def get_reward(self, state, action): # Rewards
         pass
 
+    def __equal_dicts(self, dict1, dict2, tol):
+        for key in dict1.keys():
+            if dict1[key] - dict2[key] > tol:
+                return False
+        return True
+
     def __iteration(self, initial_values, T, gamma):
-        actions = self.get_actions()
         states = self.get_states()
 
         Us = [initial_values]
@@ -42,14 +47,13 @@ class MDP(ABC):
             new_u = copy.deepcopy(Us[-1])
             for state in states:
                 max_found = float('-inf')
-                for action in actions:
+                for action in self.get_actions(state):
                     val = self.get_reward(state, action)
-                    for j in states:
-                        val += gamma*\
-                            self.get_transition_prob(j, state, action)*Us[-1][j]
+                    for j, p in self.get_transitions(state, action):
+                        val += gamma*p*Us[-1][j]
                     max_found = max(max_found, val)
                 new_u[state] = max_found
-            if np.linalg.norm(Us[-1] - new_u) < tol:
+            if self.__equal_dicts(Us[-1], new_u, tol):
                 break
             Us.append(new_u)
         return Us
