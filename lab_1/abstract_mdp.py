@@ -7,7 +7,7 @@ class MDP(ABC):
     epsilon = 1e-5
 
     def __init__(self):
-        self.epsilon = 1e-2
+        self.epsilon = 1e-4
         super().__init__()
     
     # Model methods:
@@ -51,11 +51,11 @@ class MDP(ABC):
                 for action in possible_actions:
                     val = self.get_reward(state, action)
                     transitions = self.get_transitions(state, action)
-                    # print("val: " + str(val))
-                    # print("transitions: " + str(transitions))
-                    # a = input()
-                    for j, p in transitions:
-                        val += gamma*p*Us[-1][j]
+                    for next_state, p in transitions:
+                        val += gamma*p*Us[-1][next_state]
+                        # if Us[-1][j] < -50:
+                        #     print(Us[-1][j])
+                        #     print(val)
                     max_found = max(max_found, val)
                 new_u[state] = max_found
             if self.__equal_dicts(Us[-1], new_u, tol):
@@ -64,7 +64,7 @@ class MDP(ABC):
         return Us
 
 
-    def value_iteration(self, initial_values, gamma = 0.8):
+    def value_iteration(self, initial_values, gamma = 0.95):
         ''' Performs value iteration algorithm to defined MDP
             returns list of state values after each iteration
         '''
