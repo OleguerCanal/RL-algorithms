@@ -18,8 +18,6 @@ class Problem1B(MDP):
 
         self.actions = [(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)]
         self.goal = (6, 7)
-        self.dead_state = "dead"
-        self.free_state = "free"
 
     def get_states(self):
         player_states = tuple(np.swapaxes(np.where(self.map == 1), 0, 1))
@@ -28,8 +26,6 @@ class Problem1B(MDP):
         tuple_states = []
         for state in states:
             tuple_states.append((tuple(state[0]), tuple(state[1])))
-        tuple_states.append(self.dead_state)
-        tuple_states.append(self.free_state)
         return tuple_states
     
     def __valid_action(self, position, action, player = True):
@@ -42,9 +38,9 @@ class Problem1B(MDP):
         return True
 
     def get_actions(self, state):
-        if state == self.dead_state:
+        if state == self.goal:
             return []
-        if (state == self.free_state):
+        if (state[0] == state[1]):
             return []
         possible_actions = []
         for action in self.actions:
@@ -54,8 +50,10 @@ class Problem1B(MDP):
 
     def get_transitions(self, state, action):
         player_pos = tuple(np.array(state[0]) + np.array(action))
-        if player_pos == self.goal:
-            return [(self.free_state, 1)]
+        # if (state[0] == state[1]):
+        #     return None
+        # if player_pos == (6, 5):
+        #     return None, 0
         minotaur_positions = []
         for action in self.actions:
             if self.__valid_action(state[1], action, player=False):
@@ -64,18 +62,11 @@ class Problem1B(MDP):
         prob = 1./float(len(minotaur_positions))
         result = []
         for mino_pos in minotaur_positions:
-            if player_pos == mino_pos:
-                result.append((self.dead_state, prob))
-            else:
-                new_state = (player_pos,  mino_pos)
-                result.append((new_state, prob))
+            new_state = (player_pos,  mino_pos)
+            result.append((new_state, prob))
         return result
 
     def get_reward(self, state, action):
-        if state == self.dead_state:
-            return 0
-        if state == self.free_state:
-            return 0
         player_pos = tuple(np.array(state[0]) + np.array(action))
         new_state = (tuple(player_pos), tuple(state[1]))
         if player_pos == tuple(state[1]):
