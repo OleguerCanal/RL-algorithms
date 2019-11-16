@@ -83,17 +83,16 @@ class MDP(ABC):
         states = self.get_states()
         action_dict = {}
         for state in states:
-            player_pos = state[0]
             max_found = -float('inf')
             best_action = None
             for action in self.get_actions(state):
-                new_pos = tuple(np.array(player_pos)+np.array(action))
-                action_val = values_dict[new_pos]
+                new_states = self.get_transitions(state, action)
+                action_val = sum(values_dict[new_state]*prob for new_state, prob in new_states)
                 if action_val > max_found:
                     max_found = action_val
                     best_action = action
-            action_dic[state] = best_action
-        return action_dic
+            action_dict[state] = best_action
+        return action_dict
 
     def policy_evaluation(self, policy, discount = 1):
         # Return value mapping: map state->value
