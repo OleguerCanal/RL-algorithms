@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import copy
 import random
+import tqdm
  
 class MDP(ABC):
     epsilon = 1e-5
@@ -41,23 +42,22 @@ class MDP(ABC):
 
         Us = [initial_values]
         tol = self.epsilon*(1 - gamma)/gamma
+        minus_inf = -100000
 
         while T > 0:
             T -= 1
             new_u = copy.deepcopy(Us[-1])
             for state in states:
-                max_found = -100
+                max_found = minus_inf
                 possible_actions = self.get_actions(state)
                 for action in possible_actions:
                     val = self.get_reward(state, action)
                     transitions = self.get_transitions(state, action)
                     for next_state, p in transitions:
                         val += gamma*p*Us[-1][next_state]
-                        # if Us[-1][j] < -50:
-                        #     print(Us[-1][j])
-                        #     print(val)
                     max_found = max(max_found, val)
-                new_u[state] = max_found
+                if max_found != minus_inf:
+                    new_u[state] = max_found
             if self.__equal_dicts(Us[-1], new_u, tol):
                 break
             Us.append(new_u)
@@ -78,9 +78,21 @@ class MDP(ABC):
         Us = self.__iteration(initial_values, T, 1)
         return Us
 
-    def get_policy(self, value_mapping, discount = 0.8):
-        #TODO(federico): FIX THIS NOW!!! >:-(
-        pass
+    def get_policy(self, values_dict):
+        # return: map[state] = action
+        states = self.get_states()
+        action_dict = {}
+        for state in states:
+            max_found = -float('inf')
+            best_action = None
+            for action in self.get_actions(state):
+                new_states = self.get_transitions(state, action)
+                action_val = sum(values_dict[new_state]*prob for new_state, prob in new_states)
+                if action_val > max_found:
+                    max_found = action_val
+                    best_action = action
+            action_dict[state] = best_action
+        return action_dict
 
     def policy_evaluation(self, policy, discount = 1):
         # Return value mapping: map state->value
