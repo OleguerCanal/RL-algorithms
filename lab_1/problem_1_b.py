@@ -38,10 +38,10 @@ class Problem1B(MDP):
         return True
 
     def get_actions(self, state):
-        if state == self.goal:
-            return []
-        if (state[0] == state[1]):
-            return []
+        #if state == self.goal:
+        #    return []
+        #if (state[0] == state[1]):
+        #    return []
         possible_actions = []
         for action in self.actions:
             if self.__valid_action(state[0], action, player = True):
@@ -50,17 +50,17 @@ class Problem1B(MDP):
 
     def get_transitions(self, state, action):
         player_pos = tuple(np.array(state[0]) + np.array(action))
-        minotaur_positions, prob = __mino_positions(state[1])
+        minotaur_positions, prob = self.__mino_positions(state[1])
         for mino_pos in minotaur_positions:
             new_state = (player_pos,  mino_pos)
             yield new_state, prob
 
-    def __mino_positions(self, mino_pos)
+    def __mino_positions(self, mino_pos):
         minotaur_positions = []
         for action in self.actions:
             if self.__valid_action(mino_pos, action, player=False):
-                mino_pos = tuple(np.array(state[1]) + np.array(action))
-                minotaur_positions.append(mino_pos)
+                new_mino_pos = tuple(map(sum, zip(mino_pos, action)))
+                minotaur_positions.append(new_mino_pos)
         prob = 1./len(minotaur_positions)
         return minotaur_positions, prob
 
@@ -80,23 +80,26 @@ class Problem1B(MDP):
                 heatmap[state[0]] = values_dict[state]
         return heatmap
 
-    def __generate_game(self, values, deadline):
-        cur_state = (start, goal) #player in start, mino in goal
+    def generate_game(self, values, deadline):
+        cur_state = (self.start, self.goal) #player in start, mino in goal
         policy = self.get_policy(values)
         T = 0
         states = [cur_state]
         while True:
             if cur_state[0] == cur_state[1]:
+                print("Eaten by minotaur")
                 return states, 0
             if cur_state[0] == self.goal:
+                print("Win!")
                 return states, 1
             if T == deadline:
+                print("Deadline")
                 return states, 0
             action = policy[cur_state]
-            new_player_pos = (state[0][0] + action[0], state[0][1] + action[1])
+            new_player_pos = tuple(map(sum, zip(cur_state[0], action)))
             # gen random mino move
-            possible_mino_pos = __mino_positions(cur_state[1])
-            new_mino_pos = random.choice(possible_mino_pos)
+            possible_mino_positions, prob = self.__mino_positions(cur_state[1])
+            new_mino_pos = random.choice(possible_mino_positions)
             cur_state = (new_player_pos, new_mino_pos)
             states.append(cur_state)
             T = T + 1
@@ -110,17 +113,18 @@ if __name__ == "__main__":
     #     rew = max([problem.get_reward(state, a) for a in problem.get_actions(state)])
     #     initial_values[state] = rew
 
-    value_hist = problem.dynamic_programming(initial_values = initial_values, T = 20)
+    value_hist = problem.dynamic_programming(initial_values = initial_values, T = 15)
+    policy = problem.get_policy(value_hist[-1])
     mino_pos = (2,3)
-    for val_map in value_hist:
-        heatmap = problem.get_heat_map(val_map, mino_pos)
-        plt.imshow(heatmap, cmap='hot', interpolation='nearest')
-        plt.show()
-    # value_hist = problem.value_iteration(initial_values = initial_values)
 
-    #mino_states = tuple(np.swapaxes(np.where(problem.map < 2), 0, 1))
-    #mino_states = [(3, 1), (2, 3), (4, 7)]
-    #for mino_pos in mino_states:
-    #    heatmap = problem.get_heat_map(value_hist[-1], mino_pos)
-    #    plt.imshow(heatmap, cmap='hot', interpolation='nearest')
-    #    plt.show()
+    wins = 0
+    tot = 0
+    for i in range(100):
+        states, result = problem.generate_game(value_hist[-1], 30)
+        wins += result
+        tot += 1
+    print("Wins: {} out of {}".format(wins, tot))
+
+#   states, result = problem.generate_game(value_hist[-1], 30)
+#   for state in states:
+#        print(state)
