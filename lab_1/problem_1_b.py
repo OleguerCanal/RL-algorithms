@@ -5,6 +5,7 @@ import random
 import itertools
 from abstract_mdp import MDP
 from matplotlib import pyplot as plt
+from tqdm import tqdm
 
 class Problem1B(MDP):
     def __init__(self):
@@ -87,14 +88,11 @@ class Problem1B(MDP):
         states = [cur_state]
         while True:
             if cur_state[0] == cur_state[1]:
-                print("Eaten by minotaur")
-                return states, 0
+                return states, "Minotaur"
             if cur_state[0] == self.goal:
-                print("Win!")
-                return states, 1
+                return states, "Win"
             if T == deadline:
-                print("Deadline")
-                return states, 0
+                return states, "Deadline"
             action = policy[cur_state]
             new_player_pos = tuple(map(sum, zip(cur_state[0], action)))
             # gen random mino move
@@ -106,25 +104,19 @@ class Problem1B(MDP):
 
 if __name__ == "__main__":
     problem = Problem1B()
-
     states = problem.get_states()
     initial_values = {state : 0 for state in states}
-    # for state in states:
-    #     rew = max([problem.get_reward(state, a) for a in problem.get_actions(state)])
-    #     initial_values[state] = rew
+    time_steps = 20
 
-    value_hist = problem.dynamic_programming(initial_values = initial_values, T = 15)
+    print("Computing policy ...")
+    value_hist = problem.dynamic_programming(initial_values = initial_values, T = time_steps)
     policy = problem.get_policy(value_hist[-1])
-    mino_pos = (2,3)
 
-    wins = 0
-    tot = 0
-    for i in range(100):
-        states, result = problem.generate_game(value_hist[-1], 30)
-        wins += result
-        tot += 1
-    print("Wins: {} out of {}".format(wins, tot))
-
-#   states, result = problem.generate_game(value_hist[-1], 30)
-#   for state in states:
-#        print(state)
+    n_games = 1000
+    print("Generating {} games ...".format(n_games))
+    endgames = {"Minotaur":0, "Deadline":0, "Win":0}
+    for i in tqdm(range(n_games)):
+        states, result = problem.generate_game(value_hist[-1], deadline = time_steps)
+        endgames[result] += 1
+    print("Wins: {}, Minotaur: {}, Deadline: {}".format(endgames["Win"],\
+            endgames["Minotaur"], endgames["Deadline"]))
