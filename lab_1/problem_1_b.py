@@ -39,10 +39,10 @@ class Problem1B(MDP):
         return True
 
     def get_actions(self, state):
-        #if state == self.goal:
-        #    return []
-        #if (state[0] == state[1]):
-        #    return []
+        if state == self.goal:
+            return []
+        if (state[0] == state[1]):
+            return []
         possible_actions = []
         for action in self.actions:
             if self.__valid_action(state[0], action, player = True):
