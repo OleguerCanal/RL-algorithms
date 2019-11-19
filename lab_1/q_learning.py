@@ -3,16 +3,16 @@ from tqdm import tqdm
 import random
 import copy
 
-def get_valid_action(pos, actions):
+def get_valid_action_id(pos, actions):
     def is_valid(action):
         if pos[0] + action[0] < 0 or pos[0] + action[0] > 3 or\
             pos[1] + action[1] < 0 or pos[1] + action[1] > 3:
             return False
         return True
     valid_actions = []
-    for action in actions:
+    for action_id, action in enumerate(actions):
         if is_valid(action):
-            valid_actions.append(action)
+            valid_actions.append(action_id)
     return valid_actions
 
 
@@ -31,77 +31,61 @@ class State():
             self.thief = state.thief
             self.police = state.police
 
-    def step(self, action):
-        self.thief += np.array(action)
-        self.police += random.choice(\
-            get_valid_action(self.police, State.police_actions))
+    def get_coord(self):
+        return self.thief[0], self.thief[1], self.police[0], self.police[1]
+
+    def step(self, action_id):
+        self.thief += State.thief_actions[action_id]
+        self.police += State.police_actions[random.choice(\
+                get_valid_action_id(self.police, State.police_actions))]
 
         reward = 0
-
         if np.array_equal(self.thief, State.bank):
             reward += 1
         if np.array_equal(self.thief, self.police):
             reward -= 10
         return reward
 
-    def __string__(self):
-        print(self.thief)
-        print(self.police)
-
-    def __equal__(self, other):
-        return self.thief == other.thief and self.police == other.police
-
-    def __hash__(self):
-        return hash(tuple(self.thief)) + hash(1000*tuple(self.police))
+    # def __string__(self):
+    #     print(self.thief)
+    #     print(self.police)
 
 
 class Quality():
     def __init__(self):
-        self.Q = {}
+        self.Q = np.zeros((4, 4, 4, 4, 5, 2))
+        self.Q[:, :, :, :, :, 1] = 1
+        # print(self.Q)
 
-    def update(self, state, action, value):
-        action = tuple(action)
-        if state not in self.Q:
-            self.Q[state] = {}
-        if action not in self.Q[state]:
-            self.Q[state][action] = (value, 0)
-        self.Q[state][action] = (value, self.Q[state][action][1] + 1)
+    def update(self, state, action_id, value):
+        if np.isnan(value):
+            print("kfjsbfbjfbvfvfvvf")
+        a, b, c, d = state.get_coord()
+        self.Q[a, b, c, d, action_id, 0] = value
+        self.Q[a, b, c, d, action_id, 1] += 1
 
-    def get(self, state, action):
-        action = tuple(action)
-        if state not in self.Q:
-            return 0
-        if tuple(action) not in self.Q[state]:
-            return 0
-        return self.Q[state][action][0]
+    def get(self, state, action_id):
+        a, b, c, d = state.get_coord()
+        # print(self.Q[a, b, c, d, action_id, 0])
+        return self.Q[a, b, c, d, action_id, 0]
     
-    def get_count(self, state, action):
-        action = tuple(action)
-        if state not in self.Q:
-            return 1
-        if tuple(action) not in self.Q[state]:
-            return 1
-        return self.Q[state][action][1]
+    def get_count(self, state, action_id):
+        a, b, c, d = state.get_coord()
+        return self.Q[a, b, c, d, action_id, 1]
     
     def get_best_action_val(self, state):
-        if state not in self.Q:
-            return 0
-        return np.argmax(self.Q[state])
+        a, b, c, d = state.get_coord()
+        return np.max(self.Q[a, b, c, d, :, 0])
+        # print(m)
+        # print(self.Q[a, b, c, d, :, 0])
+        # SystemError()
 
     def best_action(self, state):
-        if state not in self.Q:
-            print("State never seen, taking random action")
-            pol = Policy()
-            return pol.uniform(state)
-        return max(self.Q[state], key=self.Q[state].get)
+        a, b, c, d = state.get_coord()
+        return np.argmax(self.Q[a, b, c, d, :, 0])
 
     def converged(self, old, tol = 1e-5):
-        for state in self.Q:
-            for action in self.Q[state]:
-                if abs(self.get(state, action) - old.get(state, action)) > tol:
-                    return False
-        return True
-
+        return False
 
 class Policy():
     def __init__(self, Q=None, epsilon = 0.1):
@@ -111,7 +95,7 @@ class Policy():
     def uniform(self, state):
         # print(get_valid_action(state.thief, state.thief_actions))
         return random.choice(\
-            get_valid_action(state.thief, state.thief_actions))
+            get_valid_action_id(state.thief, state.thief_actions))
 
     def greedy(self, state):
         return self.Q.best_action(state)
@@ -163,7 +147,7 @@ class Agent():
         pi = Policy(self.Q)
         greedy_reward = 0
         uniform_reward = 0
-        for i in tqdm(range(T)):
+        for i in range(T):
             greedy_action = pi.greedy(greedy_state)
             greedy_next_state = State(greedy_state)
             greedy_reward += greedy_next_state.step(greedy_action)
@@ -180,7 +164,7 @@ class Agent():
 if __name__ == "__main__":
     agent = Agent()
     initial_state = State(None, thief = (0, 0), police = (3, 3))
-    agent.train(initial_state, 10000)
+    agent.train(initial_state, 1000000)
     
 
     
