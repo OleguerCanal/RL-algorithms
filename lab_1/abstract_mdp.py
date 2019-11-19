@@ -33,7 +33,7 @@ class MDP(ABC):
 
     def __equal_dicts(self, dict1, dict2, tol):
         for key in dict1.keys():
-            if dict1[key] - dict2[key] > tol:
+            if abs(dict1[key] - dict2[key]) > tol:
                 return False
         return True
 
