@@ -86,15 +86,15 @@ class Problem1B(MDP):
         return trans
 
     def get_reward(self, state, action):
-        # if state == self.__dead_state:
-        #     return -1
+        if state == self.__dead_state:
+            return -2
         if state == self.__free_state:
-            print("asking reward of free state")
+            # print("asking reward of free state")
             return 0
         if action == self.__die_action:
-            return -10
+            return -100
         if action == self.__escape_action:
-            return 0
+            return 10
         return -1
 
     def get_heat_map(self, values_dict, minotaur_pos):
@@ -131,18 +131,18 @@ if __name__ == "__main__":
     states = problem.get_states()
     initial_values = {state : 0 for state in states}
 
-    value_hist = problem.dynamic_programming(initial_values = initial_values, T = 20)
-    # value_hist = problem.value_iteration(initial_values = initial_values, gamma = 0.95)
+    # value_hist = problem.dynamic_programming(initial_values = initial_values, T = 20)
+    value_hist = problem.value_iteration(initial_values = initial_values, gamma = 0.95)
 
-    mino_pos = (2, 0)
+    mino_pos = (4, 1)
     heatmap = problem.get_heat_map(value_hist[-1], mino_pos)
     plt.imshow(heatmap, cmap='hot', interpolation='nearest')
     plt.show()
 
-    time_steps = 20
+    # time_steps = 20
 
-    # print("Computing policy ...")
-    # value_hist = problem.dynamic_programming(initial_values = initial_values, T = time_steps)
+    # # print("Computing policy ...")
+    # # value_hist = problem.dynamic_programming(initial_values = initial_values, T = time_steps)
     # policy = problem.get_policy(value_hist[-1])
 
     # n_games = 1000

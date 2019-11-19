@@ -50,12 +50,16 @@ class MDP(ABC):
             for state in states:
                 max_found = minus_inf
                 possible_actions = self.get_actions(state)
+
                 for action in possible_actions:
                     val = self.get_reward(state, action)
                     transitions = self.get_transitions(state, action)
+                    
                     for next_state, p in transitions:
                         val += gamma*p*Us[-1][next_state]
                     max_found = max(max_found, val)
+
+
                 if max_found != minus_inf:
                     new_u[state] = max_found
             if self.__equal_dicts(Us[-1], new_u, tol):
