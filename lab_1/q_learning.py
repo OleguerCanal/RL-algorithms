@@ -50,7 +50,6 @@ class State():
     #     print(self.thief)
     #     print(self.police)
 
-
 class Quality():
     def __init__(self):
         self.Q = np.zeros((4, 4, 4, 4, 5, 2))
@@ -58,8 +57,8 @@ class Quality():
         # print(self.Q)
 
     def update(self, state, action_id, value):
-        if np.isnan(value):
-            print("kfjsbfbjfbvfvfvvf")
+        # if np.isnan(value) or value != 0:
+        #     print("kfjsbfbjfbvfvfvvf")
         a, b, c, d = state.get_coord()
         self.Q[a, b, c, d, action_id, 0] = value
         self.Q[a, b, c, d, action_id, 1] += 1
@@ -85,7 +84,7 @@ class Quality():
         return np.argmax(self.Q[a, b, c, d, :, 0])
 
     def converged(self, old, tol = 1e-5):
-        return False
+        return np.max(np.abs(self.Q[:, :, :, :, 0] - old.Q[:, :, :, :, 0])) < tol
 
 class Policy():
     def __init__(self, Q=None, epsilon = 0.1):
@@ -121,23 +120,23 @@ class Agent():
             (reward + self.lamb*self.Q.get_best_action_val(next_state) - self.Q.get(state, action))
         self.Q.update(state, action, value)
 
-    def train(self, initial_state, max_iter = 1e10):
-        state = initial_state
+    def train(self, initial_state, epochs = 1e8, steps = 100):
+        for epoch in tqdm(range(int(epochs))):
+            state = initial_state
+            for step in range(steps):
+                old_Q = copy.deepcopy(self.Q)
 
-        for it in tqdm(range(int(max_iter))):
-            old_Q = copy.deepcopy(self.Q)
+                action = self.mu.uniform(state)
+                next_state = State(state)
+                reward = next_state.step(action)
 
-            action = self.mu.uniform(state)
-            next_state = State(state)
-            reward = next_state.step(action)
+                self.update(state, action, reward, next_state)
 
-            self.update(state, action, reward, next_state)
+                state = next_state
 
-            state = next_state
-
-            # if self.Q.converged(old_Q):
-            #     print("Iterations: " + str(it))
-            #     break
+            if self.Q.converged(old_Q):
+                print("Iterations: " + str(epoch))
+                break
 
 
     def test(self, initial_state, T = 20):
@@ -164,7 +163,7 @@ class Agent():
 if __name__ == "__main__":
     agent = Agent()
     initial_state = State(None, thief = (0, 0), police = (3, 3))
-    agent.train(initial_state, 100000)
+    agent.train(initial_state, 10000000)
     
 
     
