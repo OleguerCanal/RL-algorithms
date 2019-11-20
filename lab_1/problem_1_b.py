@@ -139,6 +139,7 @@ if __name__ == "__main__":
     plt.imshow(heatmap, cmap='hot', interpolation='nearest')
     plt.show()
 
+
     # time_steps = 20
 
     # # print("Computing policy ...")
