@@ -74,15 +74,13 @@ class State:
         return 0
 
     def __str__(self):
-        print("Player:" + str(self.player))
-        print("Mino:" + str(self.mino))
-        return ""
+        return "Player:" + str(self.player) + ", " + "Mino:" + str(self.mino)
 
 def policy(state, T, values):
     best_action = None
     max_found = state.reward()
     for action in state.get_actions():
-        val = 0
+        val = state.reward()
         for next_state, p in state.get_transitions(action):
             xp, yp, xm, ym = next_state.get_coord()
             val += p*values[xp, yp, xm, ym, T + 1]
@@ -117,7 +115,7 @@ def get_heat_map(values, minotaur_pos, T):
     return heatmap
 
 def value_iteration(value, T):
-    for T in tqdm(range(T-1, 0, -1)):
+    for T in tqdm(range(T-1, -1, -1)):
         for index, _ in np.ndenumerate(value[:, :, :, :, T]):
             state = State(index)
             max_found = state.reward()
@@ -134,7 +132,11 @@ def value_iteration(value, T):
 
 
 def train_and_test(max_t = 20):
-    for T in range(14, max_t, 2):
+    deadlines = range(16, max_t, 1)
+    theoretical_successes = []
+    experiment_successes = []
+
+    for T in deadlines:
         print("Deadline: " + str(T))
 
         value = np.zeros((map.shape[0], map.shape[1], map.shape[0], map.shape[1], T))
@@ -146,23 +148,43 @@ def train_and_test(max_t = 20):
         xp, yp, xm, ym = initial_state.get_coord()
         print("Escape prob: " + str(value[xp, yp, xm, ym, 0]))
 
-        n_games = 100
+        n_games = 1000
         endgames = {"Minotaur":0, "Deadline":0, "Win":0}
         for i in range(n_games):
-            states, result = generate_game(value, initial_state, T-1)
+            states, result = generate_game(value, initial_state, T)
             endgames[result] += 1
         print("Wins: {}, Minotaur: {}, Deadline: {}".format(endgames["Win"],\
                 endgames["Minotaur"], endgames["Deadline"]))
-    
+            
+        theoretical_successes.append(value[xp, yp, xm, ym, 0])
+        experiment_successes.append(endgames["Win"]/n_games)
+
+    print(deadlines)
+    print(theoretical_successes)
+    print(experiment_successes)
+
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+    ax1.plot(deadlines, theoretical_successes, '.b-', label='theoretical')
+    ax1.plot(deadlines, experiment_successes, '.r-', label='experiment')
+    plt.legend(loc='upper left')
+    plt.show()
 
 if __name__ == "__main__":
-    train_and_test(30)
+    train_and_test(40)
 
     # T = 20
     # value = np.zeros((map.shape[0], map.shape[1], map.shape[0], map.shape[1], T))
     # value[6, 5, :, :, T-1] = 1
     # value[6, 5, 6, 5, T-1] = 0
     # value = value_iteration(value, T-1)
+
+    # initial_State = State()
+    # steps, result = generate_game(value, initial_State, T)
+    # for id, step in enumerate(steps):
+    #     print(id)
+    #     print(step)
+    # print(result)
 
 
     # for t in range(T-1, 0, -1):
