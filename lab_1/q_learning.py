@@ -164,7 +164,7 @@ class Agent():
 if __name__ == "__main__":
     agent = Agent()
     initial_state = State(None, thief = (0, 0), police = (3, 3))
-    agent.train(initial_state, 1000000)
+    agent.train(initial_state, 100000)
     
 
     
@@ -178,3 +178,7 @@ if __name__ == "__main__":
 
     print("Greedy average reward: " + str(float(greedy)/n_games))
     print("Uniform averge reward: " + str(float(uniform)/n_games))
+
+    initial_state = State()
+    for action in range(4):
+        print(agent.Q.get(initial_state, action))
