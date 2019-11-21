@@ -23,6 +23,22 @@ class State():
             for action in [(0, 0), (1, 0), (-1, 0), (0, -1), (0, 1)]]
     police_actions = [np.array(action)\
             for action in [(1, 0), (-1, 0), (0, -1), (0, 1)]]
+
+    # Precompute thief actions for every thief pos:
+    valid_thief_actions = []
+    for i in range(4):
+        temp = []
+        for j in range(4):
+            temp.append(get_valid_action_id((i, j), thief_actions))
+        valid_thief_actions.append(temp)
+    
+    # Precumpute police actions for every police pos:
+    valid_police_actions = []
+    for i in range(4):
+        temp = []
+        for j in range(4):
+            temp.append(get_valid_action_id((i, j), police_actions))
+        valid_police_actions.append(temp)
     
     def __init__(self, state=None, thief=(0, 0), police=(3, 3)):
         if state is None:
@@ -38,7 +54,7 @@ class State():
     def step(self, action_id):
         self.thief += State.thief_actions[action_id]
         self.police += State.police_actions[random.choice(\
-                get_valid_action_id(self.police, State.police_actions))]
+            State.valid_police_actions[self.police[0]][self.police[1]])]
 
         reward = 0
         if np.array_equal(self.thief, State.bank):
@@ -47,56 +63,33 @@ class State():
             reward -= 10
         return reward
 
-    # def __string__(self):
-    #     print(self.thief)
-    #     print(self.police)
-
 class Quality():
     def __init__(self):
-        self.Q = np.zeros((4, 4, 4, 4, 5, 2))
-        self.Q[:, :, :, :, :, 1] = 1
-        # print(self.Q)
+        self.table = np.zeros((4, 4, 4, 4, 5, 2))
+        self.table[:, :, :, :, :, 1] = 1
 
     def update(self, state, action_id, value):
-        # if np.isnan(value) or value != 0:
-        #     print("kfjsbfbjfbvfvfvvf")
-        a, b, c, d = state.get_coord()
-        self.Q[a, b, c, d, action_id, 0] = value
-        self.Q[a, b, c, d, action_id, 1] += 1
-
-        # if value != 0:
-        #     print(value)
-        #     print(self.Q[a, b, c, d, action_id, 0])
-        #     print(self.Q[a, b, c, d, action_id, 1])
-        #     print((a, b, c, d))
-        #     print(action_id)
+        self.table[state.get_coord()][action_id][0] = value
+        self.table[state.get_coord()][action_id][1] += 1
 
     def get(self, state, action_id):
-        a, b, c, d = state.get_coord()
-        # print(self.Q[a, b, c, d, action_id, 0])
-        return self.Q[a, b, c, d, action_id, 0]
+        return self.table[state.get_coord()][action_id][0]
     
     def get_count(self, state, action_id):
-        a, b, c, d = state.get_coord()
-        return self.Q[a, b, c, d, action_id, 1]
+        return self.table[state.get_coord()][action_id][1]
     
     def get_best_action_val(self, state):
-        a, b, c, d = state.get_coord()
-        return np.max(self.Q[a, b, c, d, :, 0])
-        # print(m)
-        # print(self.Q[a, b, c, d, :, 0])
-        # SystemError()
+        return np.max(self.table[state.get_coord()][:][0])
 
     def best_action(self, state):
-        a, b, c, d = state.get_coord()
-        return np.argmax(self.Q[a, b, c, d, :, 0])
+        return np.argmax(self.table[state.get_coord()][:][0])
 
     def converged(self, old, tol = 1e-5):
-        return np.max(np.abs(self.Q[:, :, :, :, 0] - old.Q[:, :, :, :, 0])) < tol
+        return np.max(np.abs(self.table[:, :, :, :, 0] - old.Q[:, :, :, :, 0])) < tol
 
     def show(self, police):
         heatmap = np.zeros((4, 4))
-        for index, val in np.ndenumerate(self.Q[:, :, :, :, 0]):
+        for index, val in np.ndenumerate(self.table[:, :, :, :, 0]):
             if index[2] == police[0] and index[3] == police[1]:
                 state = State(None, (index[0], index[1], (index[2], index[3])))
                 best_action_id = self.best_action(state)
@@ -106,20 +99,18 @@ class Quality():
         plt.show()
 
 class Policy():
-    def __init__(self, Q=None, epsilon = 0.1):
+    def __init__(self, Q=None):
         self.Q = Q
-        self.epsion = epsilon
     
     def uniform(self, state):
-        # print(get_valid_action(state.thief, state.thief_actions))
         return random.choice(\
-            get_valid_action_id(state.thief, state.thief_actions))
+            state.valid_thief_actions[state.thief[0]][state.thief[1]])
 
     def greedy(self, state):
         return self.Q.best_action(state)
 
-    def epsilon_greedy(self, state):
-        if random.uniform(0, 1) < 0.1:
+    def epsilon_greedy(self, state, epsilon = 0.1):
+        if random.uniform(0, 1) < self.epsilon:
             return self.uniform(state)
         else:
             return self.greedy(state)
@@ -142,8 +133,8 @@ class Agent():
     def train(self, initial_state, epochs = 1e8, steps = 100):
         for epoch in tqdm(range(int(epochs))):
             state = initial_state
+            # old_Q = copy.deepcopy(self.Q)
             for step in range(steps):
-                old_Q = copy.deepcopy(self.Q)
 
                 action = self.mu.uniform(state)
                 next_state = State(state)
@@ -153,9 +144,9 @@ class Agent():
 
                 state = next_state
 
-            # if self.Q.converged(old_Q):
-            #     print("Iterations: " + str(epoch))
-            #     break
+        # if self.Q.converged(old_Q):
+        #     print("Iterations: " + str(epoch))
+        #     break
 
 
     def test(self, initial_state, T = 20):
