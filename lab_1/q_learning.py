@@ -2,6 +2,7 @@ import numpy as np
 from tqdm import tqdm
 import random
 import copy
+from matplotlib import pyplot as plt
 
 def get_valid_action_id(pos, actions):
     def is_valid(action):
@@ -63,6 +64,13 @@ class Quality():
         self.Q[a, b, c, d, action_id, 0] = value
         self.Q[a, b, c, d, action_id, 1] += 1
 
+        # if value != 0:
+        #     print(value)
+        #     print(self.Q[a, b, c, d, action_id, 0])
+        #     print(self.Q[a, b, c, d, action_id, 1])
+        #     print((a, b, c, d))
+        #     print(action_id)
+
     def get(self, state, action_id):
         a, b, c, d = state.get_coord()
         # print(self.Q[a, b, c, d, action_id, 0])
@@ -85,6 +93,17 @@ class Quality():
 
     def converged(self, old, tol = 1e-5):
         return np.max(np.abs(self.Q[:, :, :, :, 0] - old.Q[:, :, :, :, 0])) < tol
+
+    def show(self, police):
+        heatmap = np.zeros((4, 4))
+        for index, val in np.ndenumerate(self.Q[:, :, :, :, 0]):
+            if index[2] == police[0] and index[3] == police[1]:
+                state = State(None, (index[0], index[1], (index[2], index[3])))
+                best_action_id = self.best_action(state)
+                heatmap[index[0], index[1]] = best_action_id
+        
+        plt.imshow(heatmap, cmap='hot', interpolation='nearest')
+        plt.show()
 
 class Policy():
     def __init__(self, Q=None, epsilon = 0.1):
@@ -134,9 +153,9 @@ class Agent():
 
                 state = next_state
 
-            if self.Q.converged(old_Q):
-                print("Iterations: " + str(epoch))
-                break
+            # if self.Q.converged(old_Q):
+            #     print("Iterations: " + str(epoch))
+            #     break
 
 
     def test(self, initial_state, T = 20):
@@ -163,21 +182,26 @@ class Agent():
 if __name__ == "__main__":
     agent = Agent()
     initial_state = State(None, thief = (0, 0), police = (3, 3))
-    agent.train(initial_state, 10000000)
+    agent.train(initial_state, 10000)
     
+    for i in range(4):
+        for j in range(4):
+            police = (i, j)
+            agent.Q.show(police)
 
+    # print(agent.Q.Q[:, :, :, :, 0])
     
-    n_games = 100
-    greedy = 0
-    uniform = 0
-    for n in tqdm(range(n_games)):
-        g, u = agent.test(initial_state, T=20)
-        greedy += g
-        uniform += u
+    # n_games = 100
+    # greedy = 0
+    # uniform = 0
+    # for n in tqdm(range(n_games)):
+    #     g, u = agent.test(initial_state, T=20)
+    #     greedy += g
+    #     uniform += u
 
-    print("Greedy average reward: " + str(float(greedy)/n_games))
-    print("Uniform averge reward: " + str(float(uniform)/n_games))
+    # print("Greedy average reward: " + str(float(greedy)/n_games))
+    # print("Uniform averge reward: " + str(float(uniform)/n_games))
 
-    initial_state = State()
-    for action in range(4):
-        print(agent.Q.get(initial_state, action))
+    # initial_state = State()
+    # for action in range(4):
+    #     print(agent.Q.get(initial_state, action))
