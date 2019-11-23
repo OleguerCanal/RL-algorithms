@@ -16,9 +16,13 @@ class State:
     player_actions = [(-1, 0), (1, 0), (0, -1), (0, 1), (0, 0)]
     mino_actions = [(-1, 0), (1, 0), (0, -1), (0, 1), (0, 0)]
 
-    def __init__(self, coord=(0, 0, 6, 5)):
+    def __init__(self, coord=(0, 0, 6, 5), rewards={"Win":1, "Minotaur":0, "Step":0}):
         self.player = (coord[0], coord[1])
         self.mino = (coord[2], coord[3])
+        self.reward_win = rewards["Win"]
+        self.reward_mino = rewards["Minotaur"]
+        self.reward_step = rewards["Step"]
+
     
     def get_coord(self):
         return self.player[0], self.player[1], self.mino[0], self.mino[1]
@@ -68,10 +72,10 @@ class State:
 
     def reward(self):
         if self.dead():
-            return 0
+            return self.reward_mino
         if self.free():
-            return 1
-        return 0
+            return self.reward_win
+        return self.reward_step
 
     def __str__(self):
         return "Player:" + str(self.player) + ", " + "Mino:" + str(self.mino)
@@ -130,9 +134,7 @@ def value_iteration(value, T):
             value[xp, yp, xm, ym, T] = max_found
     return value
 
-
-def train_and_test(max_t = 20):
-    deadlines = range(16, max_t, 1)
+def train_and_test(deadlines = [20]):
     theoretical_successes = []
     experiment_successes = []
 
@@ -168,11 +170,10 @@ def train_and_test(max_t = 20):
     ax1.plot(deadlines, theoretical_successes, '.b-', label='theoretical')
     ax1.plot(deadlines, experiment_successes, '.r-', label='experiment')
     plt.legend(loc='upper left')
-    plt.show()
-
+    plt.show() 
+    
 if __name__ == "__main__":
-    train_and_test(40)
-
+    train_and_test(range(16, 20, 1))
     # T = 20
     # value = np.zeros((map.shape[0], map.shape[1], map.shape[0], map.shape[1], T))
     # value[6, 5, :, :, T-1] = 1
