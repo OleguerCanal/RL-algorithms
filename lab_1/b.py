@@ -173,7 +173,7 @@ def train_and_test(deadlines = [20]):
     plt.show() 
     
 if __name__ == "__main__":
-    train_and_test(range(16, 20, 1))
+    train_and_test(range(16, 20, 2))
     # T = 20
     # value = np.zeros((map.shape[0], map.shape[1], map.shape[0], map.shape[1], T))
     # value[6, 5, :, :, T-1] = 1

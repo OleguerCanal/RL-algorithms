@@ -5,7 +5,7 @@ import copy
 from matplotlib import pyplot as plt
 import pickle
 
-from p3a import State
+from p3a import *
 
 class Quality():
     def __init__(self):
@@ -23,10 +23,13 @@ class Quality():
         return self.table[state.get_coord()][action_id][1]
 
     def get_best_action_val(self, state):
-        return np.max(self.table[state.get_coord()][:][0])
+        valid_actions = state.valid_thief_actions[state.thief[0]][state.thief[1]]
+        return np.max(self.table[state.get_coord()][valid_actions][0])
 
     def best_action(self, state):
-        return np.argmax(self.table[state.get_coord()][:][0])
+        valid_actions = state.valid_thief_actions[state.thief[0]][state.thief[1]]
+        best_action = np.argmax(self.table[state.get_coord()][valid_actions][0])
+        return valid_actions[best_action]
 
     def reset_counters(self):
         self.table[:, :, :, :, :, 1] = 1
@@ -35,53 +38,28 @@ class Quality():
         return np.max(np.abs(self.table[:, :, :, :, 0] - old.Q[:, :, :, :, 0])) < tol
 
     def show(self, police):
-        heatmap = np.zeros((4, 4))
+        heatmap = np.zeros((4, 4, 5))
         for index, val in np.ndenumerate(self.table[:, :, :, :, 0]):
             if index[2] == police[0] and index[3] == police[1]:
-                state = State(None, (index[0], index[1], (index[2], index[3])))
-                best_action_id = self.get(state, 0)
-                heatmap[index[0], index[1]] = best_action_id
+                state = State(None, thief = (index[0], index[1]), police=police)
+                for action_id in range(5):
+                    heatmap[index[0], index[1], action_id] = self.get(state, action_id)
 
         # fig, axs = plt.subplots(2, 2)
         plt.subplot(3, 3, 5)
-        plt.imshow(heatmap, cmap='hot', interpolation='nearest')
+        plt.imshow(heatmap[:, :, 0], cmap='hot', interpolation='nearest')
 
-        heatmap = np.zeros((4, 4))
-        for index, val in np.ndenumerate(self.table[:, :, :, :, 0]):
-            if index[2] == police[0] and index[3] == police[1]:
-                state = State(None, (index[0], index[1], (index[2], index[3])))
-                best_action_id = self.get(state, 1)
-                heatmap[index[0], index[1]] = best_action_id
         plt.subplot(3, 3, 8)
-        plt.imshow(heatmap, cmap='hot', interpolation='nearest')
+        plt.imshow(heatmap[:, :, 1], cmap='hot', interpolation='nearest')
 
-        heatmap = np.zeros((4, 4))
-        for index, val in np.ndenumerate(self.table[:, :, :, :, 0]):
-            if index[2] == police[0] and index[3] == police[1]:
-                state = State(None, (index[0], index[1], (index[2], index[3])))
-                best_action_id = self.get(state, 2)
-                heatmap[index[0], index[1]] = best_action_id        
         plt.subplot(3, 3, 2)
-        plt.imshow(heatmap, cmap='hot', interpolation='nearest')
+        plt.imshow(heatmap[:, :, 2], cmap='hot', interpolation='nearest')
 
-        heatmap = np.zeros((4, 4))
-        for index, val in np.ndenumerate(self.table[:, :, :, :, 0]):
-            if index[2] == police[0] and index[3] == police[1]:
-                state = State(None, (index[0], index[1], (index[2], index[3])))
-                best_action_id = self.get(state, 3)
-                heatmap[index[0], index[1]] = best_action_id
-        
         plt.subplot(3, 3, 4)
-        plt.imshow(heatmap, cmap='hot', interpolation='nearest')
+        plt.imshow(heatmap[:, :, 3], cmap='hot', interpolation='nearest')
 
-        heatmap = np.zeros((4, 4))
-        for index, val in np.ndenumerate(self.table[:, :, :, :, 0]):
-            if index[2] == police[0] and index[3] == police[1]:
-                state = State(None, (index[0], index[1], (index[2], index[3])))
-                best_action_id = self.get(state, 4)
-                heatmap[index[0], index[1]] = best_action_id
         plt.subplot(3, 3, 6)        
-        plt.imshow(heatmap, cmap='hot', interpolation='nearest')
+        plt.imshow(heatmap[:, :, 4], cmap='hot', interpolation='nearest')
         plt.show()
 
     def save(self, name):
@@ -90,6 +68,7 @@ class Quality():
 
     def load(self, name):
         self.table = np.load(name)
+        print("Model " + name + " loaded!")
 
 class Policy():
     def __init__(self, Q=None):
@@ -128,13 +107,20 @@ class Agent():
         for epoch in tqdm(range(int(epochs))):
             state = initial_state
             # old_Q = copy.deepcopy(self.Q)
-            self.Q.reset_counters()
+            # self.Q.reset_counters()
             
             for step in range(int(steps)):
 
                 action = self.mu.uniform(state)
+                # next_state = copy.deepcopy(state)
                 next_state = State(state)
+                # if next_state.get_coord()[0] < 0:
+                #     print("nnlfdnlnfl")
                 reward = next_state.step(action)
+                # print(state)
+                # print("Action: " + str(action))
+                # print(next_state)
+                # print("----")
 
                 self.update(state, action, reward, next_state)
 
@@ -144,22 +130,32 @@ class Agent():
         #     print("Iterations: " + str(epoch))
         #     break
 
-
     def test(self, initial_state, T = 20):
-        greedy_state = initial_state
-        uniform_state = initial_state
+        greedy_state = copy.deepcopy(initial_state)
+        uniform_state = copy.deepcopy(initial_state)
         
         pi = Policy(self.Q)
         greedy_reward = 0
         uniform_reward = 0
         for i in range(T):
             greedy_action = pi.greedy(greedy_state)
-            greedy_next_state = State(greedy_state)
+            # print("Greedy:")
+            # print(greedy_state)
+            # print(greedy_action)
+            greedy_next_state = copy.deepcopy(greedy_state)
             greedy_reward += greedy_next_state.step(greedy_action)
+            # print(greedy_next_state)
+            greedy_state = greedy_next_state
 
             uniform_action = pi.uniform(uniform_state)
-            uniform_next_state = State(uniform_state)
+            # print("Uniform:")
+            # print(uniform_state)
+            # print(uniform_action)
+            uniform_next_state = copy.deepcopy(uniform_state)
             uniform_reward += uniform_next_state.step(uniform_action)
+            # print(uniform_next_state)
+            uniform_state = uniform_next_state
+            # print("-----------")
 
         # print("Greedy total reward: " + str(greedy_reward))
         # print("Uniform totl reward: " + str(uniform_reward))
