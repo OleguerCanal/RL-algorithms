@@ -3,65 +3,9 @@ from tqdm import tqdm
 import random
 import copy
 from matplotlib import pyplot as plt
+import pickle
 
-def get_valid_action_id(pos, actions):
-    def is_valid(action):
-        if pos[0] + action[0] < 0 or pos[0] + action[0] > 3 or\
-            pos[1] + action[1] < 0 or pos[1] + action[1] > 3:
-            return False
-        return True
-    valid_actions = []
-    for action_id, action in enumerate(actions):
-        if is_valid(action):
-            valid_actions.append(action_id)
-    return valid_actions
-
-
-class State():
-    bank = np.array([1, 1])
-    thief_actions = [np.array(action)\
-            for action in [(0, 0), (1, 0), (-1, 0), (0, -1), (0, 1)]]
-    police_actions = [np.array(action)\
-            for action in [(1, 0), (-1, 0), (0, -1), (0, 1)]]
-
-    # Precompute thief actions for every thief pos:
-    valid_thief_actions = []
-    for i in range(4):
-        temp = []
-        for j in range(4):
-            temp.append(get_valid_action_id((i, j), thief_actions))
-        valid_thief_actions.append(temp)
-    
-    # Precumpute police actions for every police pos:
-    valid_police_actions = []
-    for i in range(4):
-        temp = []
-        for j in range(4):
-            temp.append(get_valid_action_id((i, j), police_actions))
-        valid_police_actions.append(temp)
-    
-    def __init__(self, state=None, thief=(0, 0), police=(3, 3)):
-        if state is None:
-            self.thief = np.array(thief)
-            self.police = np.array(police)
-        else:
-            self.thief = state.thief
-            self.police = state.police
-
-    def get_coord(self):
-        return self.thief[0], self.thief[1], self.police[0], self.police[1]
-
-    def step(self, action_id):
-        self.thief += State.thief_actions[action_id]
-        self.police += State.police_actions[random.choice(\
-            State.valid_police_actions[self.police[0]][self.police[1]])]
-
-        reward = 0
-        if np.array_equal(self.thief, State.bank):
-            reward += 1
-        if np.array_equal(self.thief, self.police):
-            reward -= 10
-        return reward
+from p3a import State
 
 class Quality():
     def __init__(self):
@@ -77,12 +21,15 @@ class Quality():
     
     def get_count(self, state, action_id):
         return self.table[state.get_coord()][action_id][1]
-    
+
     def get_best_action_val(self, state):
         return np.max(self.table[state.get_coord()][:][0])
 
     def best_action(self, state):
         return np.argmax(self.table[state.get_coord()][:][0])
+
+    def reset_counters(self):
+        self.table[:, :, :, :, :, 1] = 1
 
     def converged(self, old, tol = 1e-5):
         return np.max(np.abs(self.table[:, :, :, :, 0] - old.Q[:, :, :, :, 0])) < tol
@@ -92,11 +39,57 @@ class Quality():
         for index, val in np.ndenumerate(self.table[:, :, :, :, 0]):
             if index[2] == police[0] and index[3] == police[1]:
                 state = State(None, (index[0], index[1], (index[2], index[3])))
-                best_action_id = self.best_action(state)
+                best_action_id = self.get(state, 0)
+                heatmap[index[0], index[1]] = best_action_id
+
+        # fig, axs = plt.subplots(2, 2)
+        plt.subplot(3, 3, 5)
+        plt.imshow(heatmap, cmap='hot', interpolation='nearest')
+
+        heatmap = np.zeros((4, 4))
+        for index, val in np.ndenumerate(self.table[:, :, :, :, 0]):
+            if index[2] == police[0] and index[3] == police[1]:
+                state = State(None, (index[0], index[1], (index[2], index[3])))
+                best_action_id = self.get(state, 1)
+                heatmap[index[0], index[1]] = best_action_id
+        plt.subplot(3, 3, 8)
+        plt.imshow(heatmap, cmap='hot', interpolation='nearest')
+
+        heatmap = np.zeros((4, 4))
+        for index, val in np.ndenumerate(self.table[:, :, :, :, 0]):
+            if index[2] == police[0] and index[3] == police[1]:
+                state = State(None, (index[0], index[1], (index[2], index[3])))
+                best_action_id = self.get(state, 2)
+                heatmap[index[0], index[1]] = best_action_id        
+        plt.subplot(3, 3, 2)
+        plt.imshow(heatmap, cmap='hot', interpolation='nearest')
+
+        heatmap = np.zeros((4, 4))
+        for index, val in np.ndenumerate(self.table[:, :, :, :, 0]):
+            if index[2] == police[0] and index[3] == police[1]:
+                state = State(None, (index[0], index[1], (index[2], index[3])))
+                best_action_id = self.get(state, 3)
                 heatmap[index[0], index[1]] = best_action_id
         
+        plt.subplot(3, 3, 4)
+        plt.imshow(heatmap, cmap='hot', interpolation='nearest')
+
+        heatmap = np.zeros((4, 4))
+        for index, val in np.ndenumerate(self.table[:, :, :, :, 0]):
+            if index[2] == police[0] and index[3] == police[1]:
+                state = State(None, (index[0], index[1], (index[2], index[3])))
+                best_action_id = self.get(state, 4)
+                heatmap[index[0], index[1]] = best_action_id
+        plt.subplot(3, 3, 6)        
         plt.imshow(heatmap, cmap='hot', interpolation='nearest')
         plt.show()
+
+    def save(self, name):
+        np.save(name, self.table)
+        print("Model saved!")
+
+    def load(self, name):
+        self.table = np.load(name)
 
 class Policy():
     def __init__(self, Q=None):
@@ -126,15 +119,18 @@ class Agent():
         return 1./(self.Q.get_count(state, action) ** (2/3))
 
     def update(self, state, action, reward, next_state, step = 1):
-        value = self.Q.get(state, action) + self.__alpha(state, action)*\
-            (reward + self.lamb*self.Q.get_best_action_val(next_state) - self.Q.get(state, action))
+        q = self.Q.get(state, action)
+        value = q + self.__alpha(state, action)*\
+            (reward + self.lamb*self.Q.get_best_action_val(next_state) - q)
         self.Q.update(state, action, value)
 
     def train(self, initial_state, epochs = 1e8, steps = 100):
         for epoch in tqdm(range(int(epochs))):
             state = initial_state
             # old_Q = copy.deepcopy(self.Q)
-            for step in range(steps):
+            self.Q.reset_counters()
+            
+            for step in range(int(steps)):
 
                 action = self.mu.uniform(state)
                 next_state = State(state)
@@ -168,31 +164,3 @@ class Agent():
         # print("Greedy total reward: " + str(greedy_reward))
         # print("Uniform totl reward: " + str(uniform_reward))
         return greedy_reward, uniform_reward
-
-
-if __name__ == "__main__":
-    agent = Agent()
-    initial_state = State(None, thief = (0, 0), police = (3, 3))
-    agent.train(initial_state, 10000)
-    
-    for i in range(4):
-        for j in range(4):
-            police = (i, j)
-            agent.Q.show(police)
-
-    # print(agent.Q.Q[:, :, :, :, 0])
-    
-    # n_games = 100
-    # greedy = 0
-    # uniform = 0
-    # for n in tqdm(range(n_games)):
-    #     g, u = agent.test(initial_state, T=20)
-    #     greedy += g
-    #     uniform += u
-
-    # print("Greedy average reward: " + str(float(greedy)/n_games))
-    # print("Uniform averge reward: " + str(float(uniform)/n_games))
-
-    # initial_state = State()
-    # for action in range(4):
-    #     print(agent.Q.get(initial_state, action))
