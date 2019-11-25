@@ -74,15 +74,15 @@ class State():
 
 if __name__ == "__main__":
     agent = Agent()
-    agent.load("models/1e41e2.npy")
+    # agent.load("models/1e4.npy")
 
     initial_state = State(None, thief = (0, 0), police = (3, 3))
 
-    # agent.q_train(initial_state, epochs = 1e5, steps = 1e2)
-    # agent.Q.save("models/1e61e2.npy")
+    agent.q_train(initial_state, epochs = 1e6)
+    # agent.save("models/1e6.npy")
     
-    # agent.Q.plot((3, 3))
-    # agent.plot_convergence()
+    agent.Q.plot((3, 3))
+    agent.plot_convergence()
 
     policy = Policy(agent.Q)
     policy.plot((3, 3))
