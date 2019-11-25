@@ -5,7 +5,7 @@ import copy
 from matplotlib import pyplot as plt
 import pickle
 
-from q_core import *
+from rl_core import *
 
 def get_valid_action_id(pos, actions):
     def is_valid(action):
@@ -69,17 +69,20 @@ class State():
     def __str__(self):
         return "Thief: " + str(self.thief) + "\n" + "Police: " + str(self.police)
 
+    def __eq__(self, other):
+        return np.array_equal(self.thief, other.thief) and np.array_equal(self.police, other.police)
+
 if __name__ == "__main__":
     agent = Agent()
-    agent.Q.load("models/1e51e2.npy")
+    # agent.Q.load("models/1e51e2.npy")
 
     initial_state = State(None, thief = (0, 0), police = (3, 3))
 
-    agent.train(initial_state, epochs = 1e6, steps = 1e2)
-    agent.Q.save("models/1e61e2.npy")
+    agent.q_train(initial_state, epochs = 1e5, steps = 1e2)
+    # agent.Q.save("models/1e61e2.npy")
     
-    agent.Q.show((3, 3))
-
+    # agent.Q.show((3, 3))
+    agent.plot_convergence()
 
     # print(agent.Q.Q[:, :, :, :, 0])
     

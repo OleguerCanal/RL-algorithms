@@ -93,6 +93,7 @@ class Agent():
         self.mu = Policy()
 
         self.lamb = 0.8
+        self.initial_state_value = [] # Assignment asks to save initial state value
 
     def __alpha(self, state, action):
         return 1./(self.Q.get_count(state, action) ** (2/3))
@@ -103,27 +104,20 @@ class Agent():
             (reward + self.lamb*self.Q.get_best_action_val(next_state) - q)
         self.Q.update(state, action, value)
 
-    def train(self, initial_state, epochs = 1e8, steps = 100):
+    def q_train(self, initial_state, epochs = 1e8, steps = 100):
         for epoch in tqdm(range(int(epochs))):
             state = initial_state
             # old_Q = copy.deepcopy(self.Q)
             # self.Q.reset_counters()
-            
             for step in range(int(steps)):
+                if state == initial_state:
+                    self.initial_state_value.append(self.Q.get_best_action_val(state))
 
                 action = self.mu.uniform(state)
-                # next_state = copy.deepcopy(state)
-                next_state = State(state)
-                # if next_state.get_coord()[0] < 0:
-                #     print("nnlfdnlnfl")
+                next_state = copy.deepcopy(state)
+                # next_state = State(state)
                 reward = next_state.step(action)
-                # print(state)
-                # print("Action: " + str(action))
-                # print(next_state)
-                # print("----")
-
                 self.update(state, action, reward, next_state)
-
                 state = next_state
 
         # if self.Q.converged(old_Q):
@@ -160,3 +154,17 @@ class Agent():
         # print("Greedy total reward: " + str(greedy_reward))
         # print("Uniform totl reward: " + str(uniform_reward))
         return greedy_reward, uniform_reward
+
+    def save(self, name):
+        self.Q.save(name)
+        name = name.split(".npy")[0] + "_conv.npy"
+        np.save(name, self.self.initial_state_value)
+
+    def load(self, name):
+        self.Q.load(name)
+        name = name.split(".npy")[0] + "_conv.npy"
+        self.initial_state_value = np.load(name)
+
+    def plot_convergence(self):
+        plt.plot(self.initial_state_value)
+        plt.show()
