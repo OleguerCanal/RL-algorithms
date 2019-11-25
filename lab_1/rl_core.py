@@ -3,6 +3,7 @@ from tqdm import tqdm
 import random
 import copy
 from matplotlib import pyplot as plt
+from matplotlib import colors
 import pickle
 
 from p3a import *
@@ -37,7 +38,7 @@ class Quality():
     def converged(self, old, tol = 1e-5):
         return np.max(np.abs(self.table[:, :, :, :, 0] - old.Q[:, :, :, :, 0])) < tol
 
-    def show(self, police):
+    def plot(self, police):
         heatmap = np.zeros((4, 4, 5))
         for index, val in np.ndenumerate(self.table[:, :, :, :, 0]):
             if index[2] == police[0] and index[3] == police[1]:
@@ -86,6 +87,39 @@ class Policy():
             return self.uniform(state)
         else:
             return self.greedy(state)
+    
+    def plot(self, police):
+        x = []
+        y = []
+        ax = []
+        ay = []
+        for index, val in np.ndenumerate(self.Q.table[:, :, :, :][0]):
+            if index[2] == police[0] and index[3] == police[1] and index[4] == 0:
+                s = State(None, thief=(index[0], index[1]), police=police)
+                best_action_value = self.Q.get_best_action_val(s)
+                print(best_action_value)
+                for action in range(len(s.thief_actions)):
+                    if self.Q.get(s, action) == best_action_value:
+                        print(index)
+                        best_action = s.thief_actions[action]
+                        x.append(index[0])
+                        y.append(index[1])
+                        ax.append(float(best_action[1]))
+                        ay.append(-float(best_action[0]))
+
+        heatmap = np.zeros((4, 4))
+        cmap = colors.ListedColormap(['white', 'red', 'green'])
+        heatmap[police] = 0.3
+        heatmap[s.bank[0]][s.bank[1]] = 0.6
+        plt.imshow(heatmap, cmap=cmap, interpolation='nearest')
+        print(x)
+        print(y)
+        print(ax)
+        print(ay)
+
+        plt.quiver(x, y, ax, ay)
+        plt.show()
+
 
 class Agent():
     def __init__(self):
@@ -163,7 +197,10 @@ class Agent():
     def load(self, name):
         self.Q.load(name)
         name = name.split(".npy")[0] + "_conv.npy"
-        self.initial_state_value = np.load(name)
+        try:
+            self.initial_state_value = np.load(name)
+        except:
+            print("Load error! No convergence was saved")
 
     def plot_convergence(self):
         plt.plot(self.initial_state_value)

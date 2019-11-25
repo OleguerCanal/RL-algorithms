@@ -74,19 +74,22 @@ class State():
 
 if __name__ == "__main__":
     agent = Agent()
-    # agent.Q.load("models/1e51e2.npy")
+    agent.load("models/1e41e2.npy")
 
     initial_state = State(None, thief = (0, 0), police = (3, 3))
 
-    agent.q_train(initial_state, epochs = 1e5, steps = 1e2)
+    # agent.q_train(initial_state, epochs = 1e5, steps = 1e2)
     # agent.Q.save("models/1e61e2.npy")
     
-    # agent.Q.show((3, 3))
-    agent.plot_convergence()
+    # agent.Q.plot((3, 3))
+    # agent.plot_convergence()
+
+    policy = Policy(agent.Q)
+    policy.plot((3, 3))
 
     # print(agent.Q.Q[:, :, :, :, 0])
     
-    n_games = 1000
+    n_games = 100
     greedy = 0
     uniform = 0
     for n in tqdm(range(n_games)):
@@ -96,7 +99,3 @@ if __name__ == "__main__":
 
     print("Greedy average reward: " + str(float(greedy)/n_games))
     print("Uniform averge reward: " + str(float(uniform)/n_games))
-
-    # initial_state = State()
-    # for action in range(4):
-    #     print(agent.Q.get(initial_state, action))

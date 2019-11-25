@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib import colors
 from tqdm import tqdm
 
 map = np.ones((7, 8))
@@ -10,19 +11,14 @@ map[6, 4] = 0
 map[1:4, 5] = 0
 map[2, 6:8] = 0
 
-
 class State:
     goal = (6, 5)
     player_actions = [(-1, 0), (1, 0), (0, -1), (0, 1), (0, 0)]
     mino_actions = [(-1, 0), (1, 0), (0, -1), (0, 1), (0, 0)]
 
-    def __init__(self, coord=(0, 0, 6, 5), rewards={"Win":1, "Minotaur":0, "Step":0}):
+    def __init__(self, coord=(0, 0, 6, 5)):
         self.player = (coord[0], coord[1])
         self.mino = (coord[2], coord[3])
-        self.reward_win = rewards["Win"]
-        self.reward_mino = rewards["Minotaur"]
-        self.reward_step = rewards["Step"]
-
     
     def get_coord(self):
         return self.player[0], self.player[1], self.mino[0], self.mino[1]
@@ -72,10 +68,10 @@ class State:
 
     def reward(self):
         if self.dead():
-            return self.reward_mino
+            return 0
         if self.free():
-            return self.reward_win
-        return self.reward_step
+            return 1
+        return 0
 
     def __str__(self):
         return "Player:" + str(self.player) + ", " + "Mino:" + str(self.mino)
@@ -85,6 +81,7 @@ def policy(state, T, values):
     max_found = state.reward()
     for action in state.get_actions():
         val = state.reward()
+        #val = -float('-inf')
         for next_state, p in state.get_transitions(action):
             xp, yp, xm, ym = next_state.get_coord()
             val += p*values[xp, yp, xm, ym, T + 1]
@@ -117,6 +114,26 @@ def get_heat_map(values, minotaur_pos, T):
         if index[2] == minotaur_pos[0] and index[3] == minotaur_pos[1]:
             heatmap[index[0], index[1]] = val
     return heatmap
+
+def get_policy_arrows(values, mino_pos, T):
+    mino_pos = tuple(mino_pos)
+    x = []
+    y = []
+    ax = []
+    ay = []
+
+    for player_pos in np.c_[np.where(map == 1)]:
+        player_pos = tuple(player_pos)
+        if player_pos == (6, 5) or player_pos == mino_pos:
+            continue
+        state = State(tuple([player_pos[0], player_pos[1], mino_pos[0], mino_pos[1]]))
+        action = policy(state, T, values)
+        x.append(player_pos[1])
+        y.append(player_pos[0])
+        ax.append(action[1])
+        ay.append(-action[0])
+    return x, y, ax, ay
+
 
 def value_iteration(value, T):
     for T in tqdm(range(T-1, -1, -1)):
@@ -173,20 +190,28 @@ def train_and_test(deadlines = [20]):
     plt.show() 
     
 if __name__ == "__main__":
-    train_and_test(range(16, 20, 2))
-    # T = 20
-    # value = np.zeros((map.shape[0], map.shape[1], map.shape[0], map.shape[1], T))
-    # value[6, 5, :, :, T-1] = 1
-    # value[6, 5, 6, 5, T-1] = 0
-    # value = value_iteration(value, T-1)
+    #train_and_test([20])
+    
+    T = 20
+    value = np.zeros((map.shape[0], map.shape[1], map.shape[0], map.shape[1], T))
+    value[6, 5, :, :, T-1] = 1
+    value[6, 5, 6, 5, T-1] = 0
+    value = value_iteration(value, T-1)
 
+    x, y, ax, ay = get_policy_arrows(value, (4, 3), 1)
+    cmap = colors.ListedColormap(['black','red','green', 'white'])
+    heatmap = map
+    heatmap[4, 3] = 0.3
+    heatmap[6, 5] = 0.6
+    plt.imshow(heatmap, cmap=cmap, interpolation='nearest')
+    plt.quiver(x, y, ax, ay)
+    plt.show()
     # initial_State = State()
     # steps, result = generate_game(value, initial_State, T)
     # for id, step in enumerate(steps):
     #     print(id)
     #     print(step)
     # print(result)
-
 
     # for t in range(T-1, 0, -1):
     #     heatmap = get_heat_map(value, (6, 5), t)
