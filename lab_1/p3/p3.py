@@ -5,8 +5,6 @@ import copy
 from matplotlib import pyplot as plt
 import pickle
 
-from rl_core import *
-
 def get_valid_action_id(pos, actions):
     def is_valid(action):
         if pos[0] + action[0] < 0 or pos[0] + action[0] > 3 or\
@@ -73,34 +71,4 @@ class State():
         return np.array_equal(self.thief, other.thief) and np.array_equal(self.police, other.police)
 
 if __name__ == "__main__":
-    agent = Agent()
-    agent.load("models/1e7.npy")
-
-    initial_state = State(None, thief = (0, 0), police = (3, 3))
-
-    # agent.q_train(initial_state, epochs = 1e7)
-    # agent.save("models/1e7.npy")
-    
-    agent.Q.plot((3, 3))
-    agent.plot_convergence()
-
-    policy = Policy(agent.Q)
-    for i in range(4):
-        for j in range(4):
-            policy.plot((i, j))
-
-    # policy.plot((3, 3))
-    # policy.plot((1, 3))
-
-    # print(agent.Q.Q[:, :, :, :, 0])
-    
-    n_games = 100
-    greedy = 0
-    uniform = 0
-    for n in tqdm(range(n_games)):
-        g, u = agent.test(initial_state, T=20)
-        greedy += g
-        uniform += u
-
-    print("Greedy average reward: " + str(float(greedy)/n_games))
-    print("Uniform averge reward: " + str(float(uniform)/n_games))
+    pass
