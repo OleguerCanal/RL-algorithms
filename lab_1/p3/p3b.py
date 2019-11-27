@@ -33,15 +33,14 @@ if __name__ == "__main__":
 
     initial_state = State(None, thief = (0, 0), police = (3, 3))
 
-    epsilons = [0.01, 0.1, 0.5, 0.7]
-    epsilons = [1]
+    # epsilons = [0.01, 0.1, 0.5, 0.7]
+    epsilons = [0.1]
     for epsilon in epsilons:
         agent = Agent()
-        # agent.load("../models/sarsa_1e7.npy")
-        agent.sarsa_train(initial_state, epochs = 1e6, epsilon = epsilon)
-        agent.save("../models/sarsa_1e6.npy")
-    
-        agent.plot_convergence()
+        agent.load("../models/sarsa_1e7.npy")
+        # agent.sarsa_train(initial_state, epochs = 1e6, epsilon = epsilon)
+        # agent.save("../models/sarsa_1e6.npy")
+        # agent.plot_convergence()
 
     # policy = Policy(agent.Q)
     # for i in range(4):
@@ -49,7 +48,7 @@ if __name__ == "__main__":
     #         policy.plot((i, j), save = False, path = "figures/p3b/")
 
     # Test against uniform policy
-    n_games = 100
+    n_games = 1000
     greedy = 0
     uniform = 0
     for n in tqdm(range(n_games)):
