@@ -133,6 +133,7 @@ class Agent():
 
         self.lamb = 0.8
         self.initial_state_value = []
+        self.epsilon = None
 
     def __alpha(self, state, action):
         return 1./(np.power(self.Q.get_count(state, action), 2./3.))
@@ -170,6 +171,7 @@ class Agent():
     def sarsa_train(self, initial_state, epochs = 1e5, epsilon = 0.1):
         state = copy.deepcopy(initial_state)
         action = self.mu.epsilon_greedy(state, epsilon=epsilon)
+        self.epsilon = epsilon
 
         for t in tqdm(range(int(epochs))):
             self.mu.Q = self.Q  # Update Q function in policy
@@ -212,17 +214,27 @@ class Agent():
 
     def save(self, name):
         self.Q.save(name)
-        name = name.replace(".npy", "_conv.npy")
+        if self.epsilon is not None:
+            name = name.replace(".npy", "_conv_" + str(self.epsilon) + ".npy")
+        else:
+            name = name.replace(".npy", "_conv.npy")
         np.save(name, self.initial_state_value)
 
-    def load(self, name):
+    def load(self, name, epsilon = None):
         self.Q.load(name)
-        name = name.replace(".npy", "_conv.npy")
+        if epsilon is not None:
+            name = name.replace(".npy", "_conv_" + str(epsilon) + ".npy")
+        else:
+            name = name.replace(".npy", "_conv.npy")
         try:
             self.initial_state_value = np.load(name)
         except:
             print("Load error! No convergence was saved")
 
     def plot_convergence(self):
-        plt.plot(self.initial_state_value)
+        plt.plot(self.initial_state_value[0:5000])
+        plt.title("Initial state value")
+        # plt.label("Initial state value after each update")
+        plt.xlabel("Update")
+        plt.ylabel("State Value")
         plt.show()
