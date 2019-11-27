@@ -14,9 +14,9 @@ map[2, 6:8] = 0
 class State:
     goal = (6, 5)
     player_actions = [(-1, 0), (1, 0), (0, -1), (0, 1), (0, 0)]
-    mino_actions = [(-1, 0), (1, 0), (0, -1), (0, 1), (0, 0)]
+    mino_actions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
-    def __init__(self, coord=(0, 0, 6, 5)):
+    def __init__(self, coord=(0, 0, 6, 6)):
         self.player = (coord[0], coord[1])
         self.mino = (coord[2], coord[3])
     
@@ -81,7 +81,6 @@ def policy(state, T, values):
     max_found = state.reward()
     for action in state.get_actions():
         val = state.reward()
-        #val = -float('-inf')
         for next_state, p in state.get_transitions(action):
             xp, yp, xm, ym = next_state.get_coord()
             val += p*values[xp, yp, xm, ym, T + 1]
@@ -92,19 +91,23 @@ def policy(state, T, values):
 
 def generate_game(values, initial_state, deadline):
     state = initial_state
-    states = []
-
-    for T in range(deadline):
-        states.append(state)
+    states = [initial_state]
+    cont = 0
+    for T in range(deadline + 1):
         if state.dead():
             return states, "Minotaur"
         if state.free():
             return states, "Win"
-
+        if T == deadline:
+            break # If this is the last ste, we can't do anything more
         action = policy(state, T, values)
+        cont += 1
         transitions = state.get_transitions(action)
         state = transitions[np.random.choice(range(len(transitions)))][0]
+        states.append(state)
+
     return states, "Deadline"
+
 
 def get_heat_map(values, minotaur_pos, T):
     minotaur_pos = tuple(minotaur_pos)
@@ -135,20 +138,21 @@ def get_policy_arrows(values, mino_pos, T):
     return x, y, ax, ay
 
 
-def value_iteration(value, T):
-    for T in tqdm(range(T-1, -1, -1)):
-        for index, _ in np.ndenumerate(value[:, :, :, :, T]):
+def value_iteration(value):
+    last_timestep = value.shape[4] - 1
+    for t in tqdm(range(last_timestep - 1, -1, -1)):
+        for index, _ in np.ndenumerate(value[:, :, :, :, t]):
             state = State(index)
             max_found = state.reward()
             for action in state.get_actions():
-                val = 0
+                val = state.reward()
                 for next_state, p in state.get_transitions(action):
                     xp, yp, xm, ym = next_state.get_coord()
-                    val += p*value[xp, yp, xm, ym, T+1]
+                    val += p*value[xp, yp, xm, ym, t+1]
                 max_found = max(max_found, val)
 
             xp, yp, xm, ym = index
-            value[xp, yp, xm, ym, T] = max_found
+            value[xp, yp, xm, ym, t] = max_found
     return value
 
 def train_and_test(deadlines = [20]):
@@ -158,12 +162,13 @@ def train_and_test(deadlines = [20]):
     for T in deadlines:
         print("Deadline: " + str(T))
 
-        value = np.zeros((map.shape[0], map.shape[1], map.shape[0], map.shape[1], T))
-        value[6, 5, :, :, T-1] = 1
-        value[6, 5, 6, 5, T-1] = 0
-        value = value_iteration(value, T-1)
-
         initial_state = State()
+
+        value = np.zeros((map.shape[0], map.shape[1], map.shape[0], map.shape[1], T + 1))
+        value[initial_state.goal[0], initial_state.goal[1], :, :, -1] = 1
+        value[initial_state.goal[0], initial_state.goal[1], initial_state.goal[0], initial_state.goal[1], -1] = 0
+        value = value_iteration(value)
+        
         xp, yp, xm, ym = initial_state.get_coord()
         print("Escape prob: " + str(value[xp, yp, xm, ym, 0]))
 
@@ -186,26 +191,29 @@ def train_and_test(deadlines = [20]):
     ax1 = fig.add_subplot(111)
     ax1.plot(deadlines, theoretical_successes, '.b-', label='theoretical')
     ax1.plot(deadlines, experiment_successes, '.r-', label='experiment')
+    ax1.set_ylim(0, 1.3)
     plt.legend(loc='upper left')
+    plt.xlabel("Deadline")
+    plt.ylabel("% of success")
+    plt.title("Theoretical and experimental probability of success")
     plt.show() 
     
 if __name__ == "__main__":
-    #train_and_test([20])
-    
-    T = 20
-    value = np.zeros((map.shape[0], map.shape[1], map.shape[0], map.shape[1], T))
-    value[6, 5, :, :, T-1] = 1
-    value[6, 5, 6, 5, T-1] = 0
-    value = value_iteration(value, T-1)
+    train_and_test(range(15, 25))
+   # T = 20
+   # value = np.zeros((map.shape[0], map.shape[1], map.shape[0], map.shape[1], T))
+   # value[6, 5, :, :, T-1] = 1
+   # value[6, 5, 6, 5, T-1] = 0
+   # value = value_iteration(value, T-1)
 
-    x, y, ax, ay = get_policy_arrows(value, (4, 3), 1)
-    cmap = colors.ListedColormap(['black','red','green', 'white'])
-    heatmap = map
-    heatmap[4, 3] = 0.3
-    heatmap[6, 5] = 0.6
-    plt.imshow(heatmap, cmap=cmap, interpolation='nearest')
-    plt.quiver(x, y, ax, ay)
-    plt.show()
+   # x, y, ax, ay = get_policy_arrows(value, (4, 3), 17)
+   # cmap = colors.ListedColormap(['black','red','green', 'white'])
+   # heatmap = map
+   # heatmap[4, 3] = 0.3
+   # heatmap[6, 5] = 0.6
+   # plt.imshow(heatmap, cmap=cmap, interpolation='nearest')
+   # plt.quiver(x, y, ax, ay)
+   # plt.show()
     # initial_State = State()
     # steps, result = generate_game(value, initial_State, T)
     # for id, step in enumerate(steps):
