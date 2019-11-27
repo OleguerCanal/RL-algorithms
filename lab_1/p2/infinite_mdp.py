@@ -2,9 +2,11 @@ import numpy as np
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
+from b import State, map
+
 def value_iteration_infinite(value, lambd):
     max_iters = 10000
-    tol = 1e-10
+    tol = 1e-5
     cont = 0
 
     for iter in tqdm(range(max_iters)):
@@ -25,8 +27,8 @@ def value_iteration_infinite(value, lambd):
         value = new_value
         cont += 1
         if delta < tol * (1 - lambd) / lambd:
-            print("Converged after "+str(cont)+" iterations")
-            print("Delta: "+str(delta))
+            print("Converged after " + str(cont) + " iterations")
+            print("Delta: " + str(delta))
             return value
 
 def policy(state, values):
@@ -49,17 +51,17 @@ def generate_game(values, initial_state, deadline):
     state = initial_state
     states = []
 
+    deaths_count = 0
+    reward_count = 0
     for T in range(deadline):
+        if np.array_equal(state.player, state.mino):
+            deaths_count += 1
         states.append(state)
-        if state.dead():
-            return states, "Minotaur"
-        if state.free():
-            return states, "Win"
-
+        reward_count += state.reward()
         action = policy(state, values)
         transitions = state.get_transitions(action)
         state = transitions[np.random.choice(range(len(transitions)))][0]
-    return states, "Deadline"
+    return states, deaths_count, reward_count
 
 def test_geometric(deadlines, n_games, lambd):
         value = np.zeros((map.shape[0], map.shape[1], map.shape[0], map.shape[1]))
