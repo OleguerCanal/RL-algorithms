@@ -2,6 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import colors
 from tqdm import tqdm
+import copy
 
 map = np.ones((7, 8))
 map[0:4, 2] = 0
@@ -14,7 +15,7 @@ map[2, 6:8] = 0
 class State:
     goal = (6, 5)
     player_actions = [(-1, 0), (1, 0), (0, -1), (0, 1), (0, 0)]
-    mino_actions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    mino_actions = [(-1, 0), (1, 0), (0, -1), (0, 1), (0, 0)]
 
     def __init__(self, coord=(0, 0, 6, 6)):
         self.player = (coord[0], coord[1])
@@ -91,9 +92,10 @@ def policy(state, T, values):
 
 def generate_game(values, initial_state, deadline):
     state = initial_state
-    states = [initial_state]
+    states = []
     cont = 0
     for T in range(deadline + 1):
+        states.append(state)
         if state.dead():
             return states, "Minotaur"
         if state.free():
@@ -104,7 +106,6 @@ def generate_game(values, initial_state, deadline):
         cont += 1
         transitions = state.get_transitions(action)
         state = transitions[np.random.choice(range(len(transitions)))][0]
-        states.append(state)
 
     return states, "Deadline"
 
@@ -199,22 +200,25 @@ def train_and_test(deadlines = [20]):
     plt.show() 
     
 if __name__ == "__main__":
-    train_and_test(range(15, 25))
-   # T = 20
-   # value = np.zeros((map.shape[0], map.shape[1], map.shape[0], map.shape[1], T))
-   # value[6, 5, :, :, T-1] = 1
-   # value[6, 5, 6, 5, T-1] = 0
-   # value = value_iteration(value, T-1)
+    # train_and_test(range(15, 25))
+    T = 20
+    # value = np.zeros((map.shape[0], map.shape[1], map.shape[0], map.shape[1], T))
+    # value[6, 5, :, :, T-1] = 1
+    # value[6, 5, 6, 5, T-1] = 0
+    # value = value_iteration(value)
 
-   # x, y, ax, ay = get_policy_arrows(value, (4, 3), 17)
-   # cmap = colors.ListedColormap(['black','red','green', 'white'])
-   # heatmap = map
-   # heatmap[4, 3] = 0.3
-   # heatmap[6, 5] = 0.6
-   # plt.imshow(heatmap, cmap=cmap, interpolation='nearest')
-   # plt.quiver(x, y, ax, ay)
-   # plt.show()
-    # initial_State = State()
+    # np.save("../models/p1a.npy", value)
+    value = np.load("../models/p1a.npy")
+
+    # x, y, ax, ay = get_policy_arrows(value, (4, 3), 17)
+    # cmap = colors.ListedColormap(['black','red','green', 'white'])
+    # heatmap = map
+    # heatmap[4, 3] = 0.3
+    # heatmap[6, 5] = 0.6
+    # plt.imshow(heatmap, cmap=cmap, interpolation='nearest')
+    # plt.quiver(x, y, ax, ay)
+    # plt.show()
+    initial_State = State()
     # steps, result = generate_game(value, initial_State, T)
     # for id, step in enumerate(steps):
     #     print(id)
@@ -225,3 +229,17 @@ if __name__ == "__main__":
     #     heatmap = get_heat_map(value, (6, 5), t)
     #     plt.imshow(heatmap, cmap='hot', interpolation='nearest')
     #     plt.show()
+    states, _ = generate_game(value, initial_State, T)
+    for i, s in enumerate(states):
+        heatmap = copy.deepcopy(map)
+        cmap = colors.ListedColormap(['black', 'red', 'green', 'blue', 'white'])
+        px, py, mx, my = s.get_coord()
+        heatmap[6][5] = 0.75
+        heatmap[px][py] = 0.5
+        heatmap[mx][my] = 0.25
+        plt.imshow(heatmap, cmap=cmap, interpolation='nearest')
+        plt.title("Step: " + str(i))
+        plt.savefig("../figures/p1a_run_test/fig" + str(i) + ".png")
+        plt.plot()
+        plt.pause(0.25)
+

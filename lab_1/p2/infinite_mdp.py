@@ -56,7 +56,7 @@ def generate_game(values, initial_state, deadline):
     for T in range(deadline):
         if np.array_equal(state.player, state.mino):
             deaths_count += 1
-        states.append(state)
+        states.append((state, reward_count))
         reward_count += state.reward()
         action = policy(state, values)
         transitions = state.get_transitions(action)
