@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 from matplotlib import colors
 from tqdm import tqdm
 import time
+import os
 
 from  infinite_mdp import *
 
@@ -80,9 +81,9 @@ class State:
         return "Player:" + str(self.player) + ", " + "Mino:" + str(self.mino)
 
 if __name__ == "__main__":
-    # lambdas = np.linspace(0, 0.9, 9)
-    lambdas = [0.8]
-    initial_values = []
+    lambdas = np.linspace(0, 0.9, 9)
+    # lambdas = [0.8]
+    # initial_values = []
 
     for lamb in lambdas:
         print("Lambda:" + str(lamb))
@@ -95,10 +96,18 @@ if __name__ == "__main__":
             for j in range(map.shape[1]):
                 value[i, j, i, j] = -50
         value = value_iteration_infinite(value = value, lambd = lamb)
-        print(value[0, 0, 1, 2])
-        initial_values.append(value[0, 0, 1, 2])
-        np.save("../figures/p2/initial_vals.npy", initial_values)
-
+        np.save("../models/p2_lamb_" + str(lamb) + ".png", value)
+        # print(value[0, 0, 1, 2])
+        # initial_values.append(value[0, 0, 1, 2])
+        # np.save("../figures/p2/initial_vals.npy", initial_values)
+        directory = "../figures/p2_policy/lamb_" + str(lamb) + "/"
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        count = 0
+        for i in range(map.shape[0]):
+            for j in range(map.shape[1]):
+                plot(value, (i, j), True, path = directory, ind = count)
+                count += 1
     # initial_values = np.load("../figures/p2/initial_vals.npy")
     # lambdas = np.array(lambdas, dtype=np.float64)
     # vals = np.array(initial_values, dtype=np.float64)
@@ -114,24 +123,24 @@ if __name__ == "__main__":
 
 
     # print("Trained!")
-    initial_state = State()
-    states, deaths, reward = generate_game(value, initial_state, 20)
-    # print("Deaths: " + str(deaths))
-    # print("Reward: " + str(reward))
+    # initial_state = State()
+    # states, deaths, reward = generate_game(value, initial_state, 20)
+    # # print("Deaths: " + str(deaths))
+    # # print("Reward: " + str(reward))
 
-    i = 0
-    for s, r in states:
-        heatmap = np.zeros(map.shape)
-        heatmap[s.banks[0][0]][s.banks[0][1]] = 1
-        heatmap[s.banks[1][0]][s.banks[1][1]] = 1
-        heatmap[s.banks[2][0]][s.banks[2][1]] = 1
-        heatmap[s.banks[3][0]][s.banks[3][1]] = 1
-        heatmap[s.player[0]][s.player[1]] = 0.6
-        heatmap[s.mino[0]][s.mino[1]] = 0.3
-        cmap = colors.ListedColormap(['white', 'red', 'green', 'blue'])
-        plt.imshow(heatmap, cmap=cmap, interpolation='nearest')
-        plt.title("Reward: " + str(r))
-        plt.savefig("../figures/p2b_run_test/fig" + str(i) + ".png")
-        plt.plot()
-        # plt.pause(0.75)
-        i += 1
+    # i = 0
+    # for s, r in states:
+    #     heatmap = np.zeros(map.shape)
+    #     heatmap[s.banks[0][0]][s.banks[0][1]] = 1
+    #     heatmap[s.banks[1][0]][s.banks[1][1]] = 1
+    #     heatmap[s.banks[2][0]][s.banks[2][1]] = 1
+    #     heatmap[s.banks[3][0]][s.banks[3][1]] = 1
+    #     heatmap[s.player[0]][s.player[1]] = 0.6
+    #     heatmap[s.mino[0]][s.mino[1]] = 0.3
+    #     cmap = colors.ListedColormap(['white', 'red', 'green', 'blue'])
+    #     plt.imshow(heatmap, cmap=cmap, interpolation='nearest')
+    #     plt.title("Reward: " + str(r))
+    #     plt.savefig("../figures/p2b_run_test/fig" + str(i) + ".png")
+    #     plt.plot()
+    #     # plt.pause(0.75)
+    #     i += 1

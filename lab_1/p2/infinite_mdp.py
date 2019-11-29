@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib import colors
 from tqdm import tqdm
 
 from b import State, map
@@ -82,3 +83,35 @@ def test_geometric(deadlines, n_games, lambd):
                     endgames["Minotaur"], endgames["Deadline"]))
             wins.append(float(endgames["Win"])/n_games)
         return wins
+
+def plot(values, police, save = False, path = "", ind = 0):
+    x = []
+    y = []
+    ax = []
+    ay = []
+    for index, val in np.ndenumerate(values[:, :, :, :]):
+        if index[2] == police[0] and index[3] == police[1]:
+            s = State((index[0], index[1], police[0], police[1]))
+            best_action = policy(s, values)
+            if best_action is not None:
+                x.append(index[1])
+                y.append(index[0])
+                ax.append(int(best_action[1]))
+                ay.append(-int(best_action[0]))
+
+    s = State((0, 0, 0, 0))
+    heatmap = np.zeros(map.shape)
+    heatmap[s.banks[0][0]][s.banks[0][1]] = 1
+    heatmap[s.banks[1][0]][s.banks[1][1]] = 1
+    heatmap[s.banks[2][0]][s.banks[2][1]] = 1
+    heatmap[s.banks[3][0]][s.banks[3][1]] = 1
+    heatmap[police[0]][police[1]] = 0.5
+    cmap = colors.ListedColormap(['white', 'red', 'blue'])
+    plt.imshow(heatmap, cmap=cmap, interpolation='nearest')
+
+    plt.quiver(x, y, ax, ay, scale=2.5, scale_units='x')
+    if save:
+        plt.savefig(path + "/fig" + str(ind) + ".png")
+    plt.plot()
+    plt.pause(0.25)
+    plt.close()
