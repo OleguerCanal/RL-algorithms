@@ -2,7 +2,7 @@
 
 ## LAB 1
 
-### Dinamic Programming in finite fully-observable stochastic MDP
+### Dynamic Programming in finite fully-observable stochastic MDP
 Agent (green) escaping (blue) a maze with walls (black) with a monster (red) capable of crossing walls:
 ![](lab_1/figures/gifs/p1a_run_test.gif)
 
