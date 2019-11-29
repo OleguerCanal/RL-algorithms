@@ -97,7 +97,7 @@ class Policy():
         else:
             return self.greedy(state)
     
-    def plot(self, police, save = False, path = ""):
+    def plot(self, police, save = False, path = "", ind = 0):
         x = []
         y = []
         ax = []
@@ -115,14 +115,14 @@ class Policy():
                         ay.append(-int(best_action[0]))
 
         heatmap = np.zeros((4, 4))
-        cmap = colors.ListedColormap(['white', 'red', 'green'])
+        cmap = colors.ListedColormap(['white', 'red', 'blue'])
         heatmap[police] = 0.3
         heatmap[s.bank[0]][s.bank[1]] = 0.6
         plt.imshow(heatmap, cmap=cmap, interpolation='nearest')
 
         plt.quiver(x, y, ax, ay)
         if save:
-            plt.savefig(path + "/policy" + str(police[0]) + str(police[1]) + "png")
+            plt.savefig(path + "/fig" + str(ind) + ".png")
         plt.show()
 
 
@@ -198,8 +198,12 @@ class Agent():
         pi = Policy(self.Q)
         greedy_reward = 0
         uniform_reward = 0
+        greedy_states = []
+        greedy_rewards = []
         for i in range(T):
             # Greedy policy
+            greedy_states.append(greedy_state)
+            greedy_rewards.append(greedy_reward)
             greedy_action = pi.greedy(greedy_state)
             greedy_next_state = copy.deepcopy(greedy_state)
             greedy_reward += greedy_next_state.step(greedy_action)
@@ -210,7 +214,7 @@ class Agent():
             uniform_next_state = copy.deepcopy(uniform_state)
             uniform_reward += uniform_next_state.step(uniform_action)
             uniform_state = uniform_next_state
-        return greedy_reward, uniform_reward
+        return greedy_reward, uniform_reward, greedy_states, greedy_rewards
 
     def save(self, name):
         self.Q.save(name)
