@@ -3,3 +3,4 @@ numpy
 gym
 keras
 matplotlib
+tensorboard
