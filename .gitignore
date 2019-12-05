@@ -107,3 +107,4 @@ venv.bak/
 models/
 */__pycache__
 lab_2/figures/
+logs/
