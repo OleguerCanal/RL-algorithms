@@ -32,21 +32,6 @@ def evaluate_federico(env, tests_num = 100):
         i += 1
     return np.mean(rewards)
 
-def evaluate_oleguer(env, tests_num = 100):
-    rewards = np.zeros(tests_num)
-    i = 0
-    while i < tests_num:
-        done = False
-        state = env.reset()
-        while not done:
-            action = 0
-            if state[2] > 0 and state[1] > -2.4:
-                action = 1
-            state, reward, done, _ = env.step(action)
-            rewards[i] += reward
-        i += 1
-    return np.mean(rewards)
-
 def evaluate_agent(env, agent, tests_num = 100):
     rewards = np.zeros(tests_num)
     i = 0
@@ -72,12 +57,10 @@ if __name__ == "__main__":
     tests_num = 100
     random_value = evaluate_random(env = env, tests_num = tests_num)
     federico_value = evaluate_federico(env = env, tests_num = tests_num)
-    oleguer_value = evaluate_oleguer(env = env, tests_num = tests_num)
     agent_value = evaluate_agent(env = env, agent = agent, tests_num = tests_num)
     
     print("Random value:", random_value)
     print("Federico value:", federico_value)
-    print("Oleguer value:", oleguer_value)
     print("Agent value:", agent_value)
 
 
