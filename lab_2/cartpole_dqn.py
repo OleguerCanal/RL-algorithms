@@ -8,8 +8,15 @@ from keras.layers import Dense
 from keras.optimizers import Adam
 from keras.models import Sequential
 from tqdm import tqdm
+from tqdm import trange
+from time import sleep
 
-EPISODES = 1000 # Maximum number of episodes
+try:
+    from tests import *
+except:
+    pass
+
+EPISODES = 100 # Maximum number of episodes
 
 # DQN Agent for the Cartpole
 # Q function approximation with NN, experience replay, and target network
@@ -55,9 +62,9 @@ class DQNAgent:
     # Tip: Consult https://keras.io/getting-started/sequential-model-guide/
     def build_model(self):
         model = Sequential()
-        model.add(Dense(16, input_dim=self.state_size, activation='relu',
+        model.add(Dense(32, input_dim=self.state_size, activation='relu',
                         kernel_initializer='he_uniform'))
-        # model.add(Dense(16, input_dim=16, activation='relu'))
+        # model.add(Dense(16, activation='relu'))
         model.add(Dense(self.action_size, activation='linear',
                         kernel_initializer='he_uniform'))
         model.summary()
@@ -72,16 +79,14 @@ class DQNAgent:
 
     # Get action from model using epsilon-greedy policy
     def get_action(self, state):
-        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
         if random.uniform(0, 1) > self.epsilon:
-            actions_values = self.model.predict(state)
-            return np.argmax(actions_values)
+            actions = self.model.predict(state)
+            action = np.argmax(actions)
         else:
-            return random.randrange(self.action_size)
-        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-    # Save sample <s,a,r,s'> to the replay memory
+            action = random.randrange(self.action_size)
+        return action
+
+    #Save sample <s,a,r,s'> to the replay memory
     def append_sample(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done)) # Add sample to the end of the list
 
@@ -97,29 +102,22 @@ class DQNAgent:
         action, reward, done = [], [], [] # Empty arrays that will grow dynamically
 
         for i in range(self.batch_size):
-            update_input[i] = mini_batch[i][0] # Allocate s(i) to the network input array from iteration i in the batch
-            action.append(mini_batch[i][1]) # Store a(i)
-            reward.append(mini_batch[i][2]) # Store r(i)
-            update_target[i] = mini_batch[i][3] # Allocate s'(i) for the target network array from iteration i in the batch
-            done.append(mini_batch[i][4])  # Store done(i)
+            update_input[i] = mini_batch[i][0] #Allocate s(i) to the network input array from iteration i in the batch
+            action.append(mini_batch[i][1]) #Store a(i)
+            reward.append(mini_batch[i][2]) #Store r(i)
+            update_target[i] = mini_batch[i][3] #Allocate s'(i) for the target network array from iteration i in the batch
+            done.append(mini_batch[i][4])  #Store done(i)
 
-        target = self.model.predict(update_input) # Generate target values for training the inner loop network using the network model
-        target_val = self.target_model.predict(update_target) # Generate the target values for training the outer loop target network
+        target = self.model.predict(update_input) #Generate target values for training the inner loop network using the network model
+        target_val = self.target_model.predict(update_target) #Generate the target values for training the outer loop target network
 
-        # Q Learning: get maximum Q value at s' from target network
-        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-        # Insert your Q-learning code here
-        # Tip 1: Observe that the Q-values are stored in the variable target
-        # Tip 2: What is the Q-value of the action taken at the last state of the episode?
-        for i in range(self.batch_size): # For every batch
+        #Q Learning: get maximum Q value at s' from target network
+        for i in range(self.batch_size):
             target[i][action[i]] = reward[i]
-            if not done:
-                target[i][action[i]] += self.discount_factor*np.max(target_val[i])
-        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+            if not done[i]:
+                target[i][action[i]] = reward[i] + self.discount_factor*np.max(target_val[i])
 
-        # Train the inner loop network
+        #Train the inner loop network
         self.model.fit(update_input, target, batch_size=self.batch_size,
                        epochs=1, verbose=0)
         return
@@ -142,13 +140,14 @@ class DQNAgent:
     def save(self, name):
         path = "models/" + name
         self.model.save_weights(path + ".h5")
-        self.target_model.save_weights(path + "_target.h5")
+        # self.target_model.save_weights(path + "_target.h5")
 
     # Load network weights
     def load(self, name):
         path = "models/" + name
         self.model.load_weights(path + ".h5")
-        self.target_model.load_weights(path + "_target.h5")
+        self.target_model.load_weights(path + ".h5")
+        # self.target_model.load_weights(path + "_target.h5")
 
 
 def sample_states(agent):
@@ -185,7 +184,8 @@ if __name__ == "__main__":
     max_q_mean = np.zeros((EPISODES,1))
     
     scores, episodes = [], [] # Create dynamically growing score and episode counters
-    for e in tqdm(range(EPISODES)):
+    t = trange(EPISODES, desc='Bar desc', leave=True)
+    for e in t:
         done = False
         score = 0
         state = env.reset() # Initialize/reset the environment
@@ -219,8 +219,8 @@ if __name__ == "__main__":
                 scores.append(score)
                 episodes.append(e)
 
-                print("episode:", e, "  score:", score," q_value:", max_q_mean[e],"  memory length:",
-                      len(agent.memory))
+                t.set_description("Score: " + str(np.round(score)) + ", Q: " + str(np.round(max_q_mean[e][0])))
+                t.refresh() # to show immediately the update
 
                 #  if the mean of scores of last 100 episodes is bigger than 195
                 #  stop training
@@ -231,3 +231,8 @@ if __name__ == "__main__":
                         sys.exit()
     agent.save("test1")
     agent.plot_data(episodes,scores,max_q_mean)
+
+    print("Simulating environments...")
+    agent_value = evaluate_agent(env = env, agent = agent, tests_num = 100)
+    print("Agent value:", agent_value)
+
