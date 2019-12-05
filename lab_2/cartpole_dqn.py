@@ -26,13 +26,13 @@ class DQNAgent:
        #  Modify here
 
         # Set hyper parameters for the DQN. Do not adjust those labeled as Fixed.
-        self.discount_factor = 0.85
+        self.discount_factor = 0.95
         self.learning_rate = 0.005
         self.epsilon = 0.02 # Fixed
         self.batch_size = 32 # Fixed
         self.memory_size = 1000
         self.train_start = 1000 # Fixed
-        self.target_update_frequency = 5
+        self.target_update_frequency = 1
 
         # Number of test states for Q value plots
         self.test_state_no = 10000
@@ -57,7 +57,7 @@ class DQNAgent:
         model = Sequential()
         model.add(Dense(16, input_dim=self.state_size, activation='relu',
                         kernel_initializer='he_uniform'))
-        model.add(Dense(16, input_dim=16, activation='relu'))
+        # model.add(Dense(16, input_dim=16, activation='relu'))
         model.add(Dense(self.action_size, activation='linear',
                         kernel_initializer='he_uniform'))
         model.summary()
@@ -113,7 +113,9 @@ class DQNAgent:
         # Tip 1: Observe that the Q-values are stored in the variable target
         # Tip 2: What is the Q-value of the action taken at the last state of the episode?
         for i in range(self.batch_size): # For every batch
-            target[i][action[i]] = reward[i] + self.discount_factor*np.max(target_val[i]) #- target[i][action[i]]
+            target[i][action[i]] = reward[i]
+            if not done:
+                target[i][action[i]] += self.discount_factor*np.max(target_val[i])
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
@@ -227,4 +229,5 @@ if __name__ == "__main__":
                         print("solved after", e-100, "episodes")
                         agent.plot_data(episodes,scores,max_q_mean[:e+1])
                         sys.exit()
+    agent.save("test1")
     agent.plot_data(episodes,scores,max_q_mean)
