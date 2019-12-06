@@ -1,21 +1,14 @@
-import copy
-import sys
-import gym
-import pylab
-import random
-import numpy as np
 from collections import deque
+import copy
+import gym
 from keras.layers import Dense
 from keras.optimizers import Adam
 from keras.models import Sequential, model_from_json
-from tqdm import tqdm
-from tqdm import trange
-from time import sleep
-
-try:
-    from tests import *
-except:
-    pass
+import numpy as np
+import pylab
+import random
+import sys
+from tqdm import tqdm, trange
 
 class DQNAgent:
     ''' Deep QN Agent with experience replay and target network
@@ -78,7 +71,9 @@ class DQNAgent:
         loaded_model_json = json_file.read()
         json_file.close()
         self.model = copy.deepcopy(model_from_json(loaded_model_json))
+        self.model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
         self.target_model = copy.deepcopy(model_from_json(loaded_model_json))
+        self.target_model.compile(loss='mse', optimizer=Adam(lr=self.learning_rate))
         self.model.load_weights(path + ".h5")
         self.target_model.load_weights(path + ".h5")
 
@@ -133,7 +128,7 @@ class DQNAgent:
             state = self.__environment.reset()
             while not done:
                 if render:
-                    self.self.__environment.render()
+                    self.__environment.render()
                 action = self.get_greedy_action(state)
                 state, reward, done, _ = self.__environment.step(action)
                 rewards[i] += reward
@@ -251,7 +246,8 @@ if __name__ == "__main__":
 
     agent = DQNAgent(environment = env, parameters = parameters)
     agent.train(name = "test1", episode_num=1000)
-    average_score = agent.test()
+    # agent.load(name = "test1")
+    average_score = agent.test(tests_num=5, render = True)
 
 
 
