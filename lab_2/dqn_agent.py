@@ -9,6 +9,8 @@ import pylab
 import random
 import sys
 from tqdm import tqdm, trange
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
 class DQNAgent:
     ''' Deep QN Agent with experience replay and target network
@@ -28,6 +30,9 @@ class DQNAgent:
         self.__state_size = environment.observation_space.shape[0]
         self.__action_size = environment.action_space.n
         self.__memory = deque(maxlen=self.memory_size)  # Memory buffer
+        sess = tf.Session()
+        self.__summary_writer = tf.summary.FileWriter("logs/")  # Log tensorboard info
+        self.__summary = tf.Summary()
 
         # Load model
         if "model" in parameters and parameters["model"] is not None:
@@ -108,6 +113,10 @@ class DQNAgent:
                         self.__update_target_model()
 
                     # Tracking metrics  TODO(oleguer): Use tensorboard for this
+                    self.__summary.value.add(tag='scores', simple_value=score)
+                    self.__summary.value.add(tag='max_q_mean', simple_value=max_q_mean[e][0])
+                    self.__summary_writer.add_summary(self.__summary)
+                    self.__summary_writer.flush()
                     scores.append(score)
                     episodes.append(e)
                     t.set_description("Score: " + str(np.round(score)) + ", Q: " + str(np.round(max_q_mean[e][0])))
@@ -230,7 +239,6 @@ class DQNAgent:
                 state = next_state
         return test_states
 
-
 if __name__ == "__main__":
     env = gym.make('CartPole-v0')
     parameters = {
@@ -243,11 +251,9 @@ if __name__ == "__main__":
         "train_start": 1000, # Fixed
         "model": None,  # Pass custom model (None => defined by build_model)
     }
-
     agent = DQNAgent(environment = env, parameters = parameters)
-    agent.train(name = "test1", episode_num=1000)
+    agent.train(name = "test1", episode_num = 1000)
     # agent.load(name = "test1")
     average_score = agent.test(tests_num=5, render = True)
-
 
 
