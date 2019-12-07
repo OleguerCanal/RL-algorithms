@@ -16,7 +16,7 @@ tf.disable_v2_behavior()
 class DQNAgent:
     ''' Deep QN Agent with experience replay and target network
     '''
-    def __init__(self, environment, parameters):
+    def __init__(self, parameters):
         # Set parameters TODO(oleguer): Pass as kwargs??
         self.discount_factor = parameters["discount_factor"] 
         self.learning_rate = parameters["learning_rate"]
@@ -27,15 +27,20 @@ class DQNAgent:
         self.target_update_frequency = parameters["target_update_frequency"]
 
         # Private vars
-        self.__environment = environment
-        self.__state_size = environment.observation_space.shape[0]
-        self.__action_size = environment.action_space.n
+        env = parameters["env"]
+        self.__environment = env
+        self.__state_size = env.observation_space.shape[0]
+        self.__action_size = env.action_space.n
         self.__memory = deque(maxlen=self.memory_size)  # Memory buffer
 
         # Load model
         if "model" in parameters and parameters["model"] is not None:
-            self.model = copy.deepcopy(parameters["model"])
-            self.target_model = copy.deepcopy(parameters["model"])
+            self.model = parameters["model"](input_size = env.observation_space.shape[0],
+                                            output_size = env.action_space.n,
+                                            lr = parameters["learning_rate"])
+            self.target_model = parameters["model"](input_size = env.observation_space.shape[0],
+                                                    output_size = env.action_space.n,
+                                                    lr = parameters["learning_rate"])
         else:
             self.model = self.build_model() 
             self.target_model = self.build_model()
@@ -83,7 +88,8 @@ class DQNAgent:
     def train(self, name, episode_num = 1000, solved_score = None, test_states_num = 1000):
         '''Train agent in loaded environment
         '''
-        print("Training model: " + str(name) + "...")
+        print("Training model: " + str(name))
+        session = tf.Session()
         self.__summary_writer = tf.summary.FileWriter("logs/" + str(name))  # Log tensorboard info
         self.__summary = tf.Summary()
 
@@ -113,9 +119,11 @@ class DQNAgent:
                     if e % self.target_update_frequency == 0:  # Update target weights
                         self.__update_target_model()
 
-                    # Tracking metrics  TODO(oleguer): Use tensorboard for this
+                    # Tracking metrics
                     self.__summary.value.add(tag='scores', simple_value=score)
                     self.__summary.value.add(tag='max_q_mean', simple_value=max_q_mean[e][0])
+                    # self.__summary.scalar(tag='scores', simple_value=score, step = e)
+                    # self.__summary.scalar(tag='max_q_mean', simple_value=max_q_mean[e][0], step = e)
                     self.__summary_writer.add_summary(self.__summary)
                     self.__summary_writer.flush()
                     scores.append(score)
@@ -260,32 +268,57 @@ class DQNAgent:
         for i in range(test_states_num):
             if done:
                 done = False
-                state = env.reset()
+                state = self.__environment.reset()
                 test_states[i] = state
             else:
                 action = random.randrange(self.__action_size)
-                next_state, reward, done, info = env.step(action)
+                next_state, reward, done, info = self.__environment.step(action)
                 test_states[i] = state
                 state = next_state
         return test_states
 
+def generate_experiment_name(params):
+    ''' Standarized way to name experiments so we can identify them
+    '''
+    name = params["env"].unwrapped.spec.id
+    name += "_df-" + str(params["discount_factor"])
+    name += "_lr-" + str(params["learning_rate"])
+    name += "_ms-" + str(params["memory_size"])
+    name += "_uf-" + str(params["target_update_frequency"])
+
+    model = params["model"](params["env"].observation_space.shape[0], params["env"].action_space.n, 0.1)
+    if model != None:
+        stringlist = []
+        model.summary(print_fn=lambda x: stringlist.append(x))
+        short_model_summary = "\n".join(stringlist)
+        a = short_model_summary.split("=================================================================")[1].split("\n")
+        name += "_mod-"
+        for i, b in enumerate(a):
+            if b != "" and len(b.split(", ")) > 1:
+                name += str(b[0])
+                name += str(b.split(", ")[1].split(")")[0])
+    return name
+
 if __name__ == "__main__":
-    # env = gym.make('CartPole-v0')
-    env = gym.make('MountainCar-v0')
+    env = gym.make('CartPole-v0')
+    # # env = gym.make('MountainCar-v0')
 
     parameters = {
+        "env" : env,
         "discount_factor": 0.95,
         "learning_rate": 0.005,
         "memory_size": 1000,
-        "target_update_frequency": 2,
+        "target_update_frequency": 1,
         "epsilon": 0.02, # Fixed
         "batch_size": 32,  # Fixed
         "train_start": 1000, # Fixed
-        "model": None,  # Pass custom model (None => defined by build_model)
+        "model": None
     }
-    experiment_name = "mountain_car_working"
+
+    experiment_name = generate_experiment_name(parameters)
+    print(experiment_name)
     
-    agent = DQNAgent(environment = env, parameters = parameters)
+    agent = DQNAgent(parameters = parameters)
     # agent.train(name = experiment_name, episode_num = 10000)
     agent.load(name = experiment_name)
 
