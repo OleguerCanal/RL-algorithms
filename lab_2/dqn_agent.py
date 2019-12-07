@@ -88,6 +88,7 @@ class DQNAgent:
     def train(self, name, episode_num = 1000, solved_score = None, test_states_num = 1000):
         '''Train agent in loaded environment
         '''
+        self.name = name
         print("Training model: " + str(name))
         session = tf.Session()
         self.__summary_writer = tf.summary.FileWriter("logs/" + str(name))  # Log tensorboard info
@@ -122,15 +123,16 @@ class DQNAgent:
                     # Tracking metrics
                     self.__summary.value.add(tag='scores', simple_value=score)
                     self.__summary.value.add(tag='max_q_mean', simple_value=max_q_mean[e][0])
-                    # self.__summary.scalar(tag='scores', simple_value=score, step = e)
-                    # self.__summary.scalar(tag='max_q_mean', simple_value=max_q_mean[e][0], step = e)
-                    self.__summary_writer.add_summary(self.__summary)
+                    self.__summary_writer.add_summary(self.__summary, e)
                     self.__summary_writer.flush()
                     scores.append(score)
                     episodes.append(e)
+
+                    # Save variables for post analysis
+                    np.save("metrics/" + str(name) + "_scores.npy", scores)
+                    np.save("metrics/" + str(name) + "_max_q_mean.npy", max_q_mean)
                     t.set_description("Score: " + str(np.round(score)) + ", Q: " + str(np.round(max_q_mean[e][0])))
                     t.refresh()
-
                     if solved_score:  # Stop training if last 100 scores > solved_score
                         if np.mean(scores[-min(100, len(scores)):]) >= solved_score:
                             print("Solved after", e-100, "episodes")
@@ -252,13 +254,13 @@ class DQNAgent:
         pylab.plot(episodes, max_q_mean, 'b')
         pylab.xlabel("Episodes")
         pylab.ylabel("Average Q Value")
-        pylab.savefig("figures/qvalues.png")
+        pylab.savefig("figures/qvalues_" + self.name + ".png")
 
         pylab.figure(1)
         pylab.plot(episodes, scores, 'b')
         pylab.xlabel("Episodes")
         pylab.ylabel("Score")
-        pylab.savefig("figures/scores.png")
+        pylab.savefig("figures/scores_" + self.name + ".png")
 
     def __sample_states(self, test_states_num):
         '''Applies random policy to sample states, used to evaluate Q average value
