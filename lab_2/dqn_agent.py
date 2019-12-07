@@ -8,6 +8,7 @@ import numpy as np
 import pylab
 import random
 import sys
+import datetime
 from tqdm import tqdm, trange
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
@@ -30,9 +31,6 @@ class DQNAgent:
         self.__state_size = environment.observation_space.shape[0]
         self.__action_size = environment.action_space.n
         self.__memory = deque(maxlen=self.memory_size)  # Memory buffer
-        sess = tf.Session()
-        self.__summary_writer = tf.summary.FileWriter("logs/")  # Log tensorboard info
-        self.__summary = tf.Summary()
 
         # Load model
         if "model" in parameters and parameters["model"] is not None:
@@ -49,7 +47,7 @@ class DQNAgent:
         '''NN used for Q learning
         '''
         model = Sequential()
-        model.add(Dense(32, input_dim=self.__state_size, activation='relu',
+        model.add(Dense(16, input_dim=self.__state_size, activation='relu',
                         kernel_initializer='he_uniform'))
         # model.add(Dense(16, activation='relu'))
         model.add(Dense(self.__action_size, activation='linear',
@@ -85,7 +83,10 @@ class DQNAgent:
     def train(self, name, episode_num = 1000, solved_score = None, test_states_num = 1000):
         '''Train agent in loaded environment
         '''
-        print("Training model...")
+        print("Training model: " + str(name) + "...")
+        self.__summary_writer = tf.summary.FileWriter("logs/" + str(name))  # Log tensorboard info
+        self.__summary = tf.Summary()
+
         test_states = self.__sample_states(test_states_num)  # Sample random states for plotting
         max_q_mean = np.zeros((episode_num,1))
         
@@ -177,6 +178,35 @@ class DQNAgent:
     def __train_model(self):
         '''Samples self.batch_size from replay memory and updates NN in one pass
         '''
+        # if len(self.__memory) < self.train_start: # Do not train if not enough memory
+        #     return
+        # batch_size = min(self.batch_size, len(self.__memory)) # Train on at most as many samples as you have in memory
+        # mini_batch = random.sample(self.__memory, batch_size) # Uniformly sample the memory buffer
+        
+        # states = mini_batch[:][0]         # s
+        # action = mini_batch[:][1]         # a
+        # reward = mini_batch[:][2]         # r
+        # states_next = mini_batch[:][3]    # s'
+        # done = mini_batch[:][4]           # done
+
+        # # Predict values for states (learning model) and states_next (target model)
+        # print(states)
+        # learning_vals = self.model.predict(np.array(states))
+        # target_vals = self.target_model.predict(states_next)
+
+        # # Update values
+        # learning_vals[:][action[:]] = reward + np.where(done == False, 1, 0)*self.discount_factor*np.max(target_vals, axis = 0)
+        # # #Q Learning: get maximum Q value at s' from target network
+        # # for i in range(self.batch_size):
+        # #     learning_vals[i][action[i]] = reward[i]
+        # #     if not done[i]:
+        # #         learning_vals[i][action[i]] = reward[i] + self.discount_factor*np.max(target_vals[i])
+
+        # quit()
+        # #Train the inner loop network
+        # self.model.fit(states, learning_vals, batch_size=self.batch_size,
+        #                epochs=1, verbose=0)
+        # return
         if len(self.__memory) < self.train_start: # Do not train if not enough memory
             return
         batch_size = min(self.batch_size, len(self.__memory)) # Train on at most as many samples as you have in memory
@@ -240,20 +270,23 @@ class DQNAgent:
         return test_states
 
 if __name__ == "__main__":
-    env = gym.make('CartPole-v0')
+    # env = gym.make('CartPole-v0')
+    env = gym.make('MountainCar-v0')
+
     parameters = {
         "discount_factor": 0.95,
         "learning_rate": 0.005,
         "memory_size": 1000,
-        "target_update_frequency": 1,
+        "target_update_frequency": 2,
         "epsilon": 0.02, # Fixed
         "batch_size": 32,  # Fixed
         "train_start": 1000, # Fixed
         "model": None,  # Pass custom model (None => defined by build_model)
     }
+    experiment_name = "mountain_car_working"
+    
     agent = DQNAgent(environment = env, parameters = parameters)
-    agent.train(name = "test1", episode_num = 1000)
-    # agent.load(name = "test1")
-    average_score = agent.test(tests_num=5, render = True)
+    # agent.train(name = experiment_name, episode_num = 10000)
+    agent.load(name = experiment_name)
 
-
+    average_score = agent.test(tests_num=1, render = True)
