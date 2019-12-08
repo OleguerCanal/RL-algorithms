@@ -1,6 +1,6 @@
 from dqn_agent import DQNAgent, generate_experiment_name
 import gym
-from keras.layers import Dense
+from keras.layers import Dense, Dropout
 from keras.optimizers import Adam
 from keras.models import Sequential, model_from_json
 
@@ -62,11 +62,31 @@ def get_model6(input_size, output_size, lr):
     model.compile(loss='mse', optimizer=Adam(lr=lr))
     return model
 
+def get_model_bce(input_size, output_size, lr):
+    model = Sequential()
+    model.add(Dense(16, input_dim=input_size, activation='relu',
+                    kernel_initializer='he_uniform'))
+    model.add(Dense(output_size, activation='linear',
+                    kernel_initializer='he_uniform'))
+    model.compile(loss='binary_crossentropy', optimizer=Adam(lr=lr))
+    return model
+
+def get_model_bce_dropout(input_size, output_size, lr):
+    model = Sequential()
+    model.add(Dense(16, input_dim=input_size, activation='relu',
+                    kernel_initializer='he_uniform'))
+    model.add(Dropout(0.25))
+    model.add(Dense(output_size, activation='linear',
+                    kernel_initializer='he_uniform'))
+    model.compile(loss='binary_crossentropy', optimizer=Adam(lr=lr))
+    return model
+
 if __name__ == "__main__":
+    # models = [get_model_bce, get_model_bce_dropout]
     models = [get_model1, get_model2, get_model3, get_model4, get_model5, get_model6]
     # TODO(oleguer): Test also different loss (binnary cross entropy could work better) 
 
-    for model in models:
+    for i, model in enumerate(models):
         env = gym.make('CartPole-v0')
 
         parameters = {
@@ -85,7 +105,7 @@ if __name__ == "__main__":
         print(experiment_name)
         
         agent = DQNAgent(parameters = parameters)
-        agent.train(name = experiment_name, episode_num = 1000)
+        agent.train(name = experiment_name, episode_num = 10000)
         # agent.load(name = experiment_name)
         # average_score = agent.test(tests_num=1, render = True)
         del agent
