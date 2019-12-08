@@ -36,7 +36,7 @@ def get_model4(input_size, output_size, lr):
     model = Sequential()
     model.add(Dense(16, input_dim=input_size, activation='relu',
                     kernel_initializer='he_uniform'))
-    model.add(Dense(4, activation='relu'))
+    model.add(Dense(8, activation='relu'))
     model.add(Dense(output_size, activation='linear',
                     kernel_initializer='he_uniform'))
     model.compile(loss='mse', optimizer=Adam(lr=lr))
@@ -62,7 +62,6 @@ def get_model6(input_size, output_size, lr):
     model.compile(loss='mse', optimizer=Adam(lr=lr))
     return model
 
-
 if __name__ == "__main__":
     models = [get_model1, get_model2, get_model3, get_model4, get_model5, get_model6]
     # TODO(oleguer): Test also different loss (binnary cross entropy could work better) 
@@ -86,7 +85,7 @@ if __name__ == "__main__":
         print(experiment_name)
         
         agent = DQNAgent(parameters = parameters)
-        agent.train(name = experiment_name, episode_num = 5000)
+        agent.train(name = experiment_name, episode_num = 1000)
         # agent.load(name = experiment_name)
         # average_score = agent.test(tests_num=1, render = True)
         del agent
