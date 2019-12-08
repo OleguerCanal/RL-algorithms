@@ -93,6 +93,9 @@ class DQNAgent:
         session = tf.Session()
         self.__summary_writer = tf.summary.FileWriter("logs/" + str(name))  # Log tensorboard info
         self.__summary = tf.Summary()
+        tensorboard_sample_size = 50  # How often to update tensorboard values
+        tb_score = 0
+        tb_q_val = 0
 
         test_states = self.__sample_states(test_states_num)  # Sample random states for plotting
         max_q_mean = np.zeros((episode_num,1))
@@ -121,10 +124,16 @@ class DQNAgent:
                         self.__update_target_model()
 
                     # Tracking metrics
-                    self.__summary.value.add(tag='scores', simple_value=score)
-                    self.__summary.value.add(tag='max_q_mean', simple_value=max_q_mean[e][0])
-                    self.__summary_writer.add_summary(self.__summary, e)
-                    self.__summary_writer.flush()
+                    tb_score += float(score)/tensorboard_sample_size
+                    tb_q_val += float(max_q_mean[e][0])/tensorboard_sample_size
+                    if e%tensorboard_sample_size == 0:
+                        self.__summary.value.add(tag='scores', simple_value=score)
+                        self.__summary.value.add(tag='max_q_mean', simple_value=max_q_mean[e][0])
+                        self.__summary_writer.add_summary(self.__summary, e)
+                        self.__summary_writer.flush()
+                        tb_score = 0
+                        tb_q_val = 0
+
                     scores.append(score)
                     episodes.append(e)
 
