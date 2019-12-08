@@ -91,24 +91,20 @@ class DQNAgent:
         self.name = name
         print("Training model: " + str(name))
         session = tf.Session()
-        self.__summary_writer = tf.summary.FileWriter("logs/" + str(name))  # Log tensorboard info
-        self.__summary = tf.Summary()
-        tensorboard_sample_size = 50  # How often to update tensorboard values
+        summary_writer = tf.summary.FileWriter("logs/" + str(name))  # Log tensorboard info
+        tensorboard_sample_size = 10.  # How often to update tensorboard values
         tb_score = 0
         tb_q_val = 0
 
         test_states = self.__sample_states(test_states_num)  # Sample random states for plotting
-        max_q_mean = np.zeros((episode_num,1))
+        # max_q_mean = np.zeros((episode_num,1))
         
-        scores, episodes = [], [] # Create dynamically growing score and episode counters
+        scores = np.zeros(episode_num)
         t = trange(episode_num, desc='Bar desc', leave=True)
         for e in t:
-            done = False
             score = 0
+            done = False
             state = self.__environment.reset() # Initialize/reset the environment
-
-            # Follow training
-            max_q_mean[e] = np.mean(np.max(self.model.predict(test_states), axis=1)) # Get Q values to
 
             while not done:
                 action = self.__get_epsilon_greedy_action(state)
@@ -119,35 +115,40 @@ class DQNAgent:
                 state = next_state
 
                 if done:
-                    self.save(name)  # Save model after each epoch
+                    # Append score tracking
+                    scores[e] = score
+
+                    # Save model and scores
+                    self.save(name)
+                    np.save("metrics/" + str(name) + "_scores.npy", scores)  # TODO(oleguer): Remove this
+                    # np.save("metrics/" + str(name) + "_max_q_mean.npy", max_q_mean)  # TODO(oleguer): Remove this
+
                     if e % self.target_update_frequency == 0:  # Update target weights
                         self.__update_target_model()
 
-                    # Tracking metrics
+                    # Tensorboard tracking metrics
+                    q_mean = np.mean(np.max(self.model.predict(test_states), axis=1)) # Average Q value for test_states
                     tb_score += float(score)/tensorboard_sample_size
-                    tb_q_val += float(max_q_mean[e][0])/tensorboard_sample_size
-                    if e%tensorboard_sample_size == 0:
-                        self.__summary.value.add(tag='scores', simple_value=score)
-                        self.__summary.value.add(tag='max_q_mean', simple_value=max_q_mean[e][0])
-                        self.__summary_writer.add_summary(self.__summary, e)
-                        self.__summary_writer.flush()
+                    tb_q_val += float(q_mean)/tensorboard_sample_size
+                    if e%int(tensorboard_sample_size) == 0:
+                        summary = tf.Summary()
+                        summary.value.add(tag='scores', simple_value=score)
+                        summary.value.add(tag='max_q_mean', simple_value=q_mean)
+                        summary_writer.add_summary(summary, e)
+                        summary_writer.flush()
                         tb_score = 0
                         tb_q_val = 0
-
-                    scores.append(score)
-                    episodes.append(e)
-
-                    # Save variables for post analysis
-                    np.save("metrics/" + str(name) + "_scores.npy", scores)
-                    np.save("metrics/" + str(name) + "_max_q_mean.npy", max_q_mean)
-                    t.set_description("Score: " + str(np.round(score)) + ", Q: " + str(np.round(max_q_mean[e][0])))
+                    
+                    # TQDM info
+                    t.set_description("Score: " + str(np.round(score)) + ", Q: " + str(np.round(q_mean)))
                     t.refresh()
+                    
                     if solved_score:  # Stop training if last 100 scores > solved_score
                         if np.mean(scores[-min(100, len(scores)):]) >= solved_score:
                             print("Solved after", e-100, "episodes")
-                            self.__plot_data(episodes,scores,max_q_mean[:e+1])
+                            # self.__plot_data(episodes,scores,max_q_mean[:e+1])
                             break
-        self.__plot_data(episodes, scores, max_q_mean)
+        # self.__plot_data(episodes, scores, max_q_mean)
 
     def test(self, tests_num, render = False):
         rewards = np.zeros(tests_num)
