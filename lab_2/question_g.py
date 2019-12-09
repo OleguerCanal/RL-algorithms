@@ -82,9 +82,10 @@ def get_model_bce_dropout(input_size, output_size, lr):
     return model
 
 if __name__ == "__main__":
-    # models = [get_model_bce, get_model_bce_dropout]
-    models = [get_model1, get_model2, get_model3, get_model4, get_model5, get_model6]
     # TODO(oleguer): Test also different loss (binnary cross entropy could work better) 
+    # models = [get_model_bce, get_model_bce_dropout]
+    # models = [get_model1, get_model2, get_model3, get_model4, get_model5, get_model6]
+    models = [get_model1]
 
     scores = []
     for i, model in enumerate(models):
@@ -92,10 +93,10 @@ if __name__ == "__main__":
 
         parameters = {
             "env" : env,
-            "discount_factor": 0.95,
-            "learning_rate": 0.005,
-            "memory_size": 1000,
-            "target_update_frequency": 1,
+            "discount_factor": 0.9,
+            "learning_rate": 0.002,
+            "memory_size": 10000,
+            "target_update_frequency": 2,
             "epsilon": 0.02, # Fixed
             "batch_size": 32,  # Fixed
             "train_start": 1000, # Fixed
@@ -106,9 +107,10 @@ if __name__ == "__main__":
         print(experiment_name)
         
         agent = DQNAgent(parameters = parameters)
-        agent.train(name = experiment_name, episode_num = 10000)
+        agent.train(name = experiment_name, episode_num = 5000)
         # agent.load(name = experiment_name)
-        # average_score = agent.test(tests_num=1000, render = False)
+        average_score = agent.test(tests_num=100, render = False)
+        print(average_score)
         # scores.append(average_score)
         del agent
         del env

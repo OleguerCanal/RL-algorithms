@@ -93,6 +93,7 @@ class DQNAgent:
         session = tf.Session()
         summary_writer = tf.summary.FileWriter("logs/" + str(name))  # Log tensorboard info
         tensorboard_sample_size = 10.  # How often to update tensorboard values
+        tensorboard_test_freq = 50.  # How often to run test on greedy policy
         tb_score = 0
         tb_q_val = 0
 
@@ -138,6 +139,12 @@ class DQNAgent:
                         summary_writer.flush()
                         tb_score = 0
                         tb_q_val = 0
+                    if e%int(tensorboard_test_freq) == 0:
+                        average_score = self.test(tests_num=100, render = False)
+                        summary = tf.Summary()
+                        summary.value.add(tag='val_score', simple_value=average_score)
+                        summary_writer.add_summary(summary, e)
+                        summary_writer.flush()
                     
                     # TQDM info
                     t.set_description("Score: " + str(np.round(score)) + ", Q: " + str(np.round(q_mean)))
@@ -164,7 +171,6 @@ class DQNAgent:
                 rewards[i] += reward
             i += 1
         mean_reward = np.mean(rewards)
-        print("Test mean reward: " + str(mean_reward))
         return mean_reward
 
     def get_greedy_action(self, state):
@@ -289,10 +295,11 @@ class DQNAgent:
                 state = next_state
         return test_states
 
-def generate_experiment_name(params):
+def generate_experiment_name(params, folder = ""):
     ''' Standarized way to name experiments so we can identify them
     '''
-    name = params["env"].unwrapped.spec.id
+    name = folder
+    name += params["env"].unwrapped.spec.id
     name += "_df-" + str(params["discount_factor"])
     name += "_lr-" + str(params["learning_rate"])
     name += "_ms-" + str(params["memory_size"])
@@ -309,7 +316,40 @@ def generate_experiment_name(params):
             if b != "" and len(b.split(", ")) > 1:
                 name += str(b[0])
                 name += str(b.split(", ")[1].split(")")[0])
-    return name
+    return name + "_" + str(datetime.datetime).replace(" ", "_")
+
+
+def perform_experiment(models, discount_factors, learning_rates, memory_sizes, update_freq):
+    for model in models:
+        for df in discount_factors:
+            for lr in learning_rates:
+                for ms in memory_sizes:
+                    for uf in update_freq:
+                        env = gym.make('CartPole-v0')
+
+                        parameters = {
+                            "env" : env,
+                            "discount_factor": df,
+                            "learning_rate": lr,
+                            "memory_size": ms,
+                            "target_update_frequency": uf,
+                            "epsilon": 0.02, # Fixed
+                            "batch_size": 32,  # Fixed
+                            "train_start": 1000, # Fixed
+                            "model": model
+                        }
+
+                        experiment_name = generate_experiment_name(parameters)
+                        print(experiment_name)
+                        
+                        agent = DQNAgent(parameters = parameters)
+                        agent.train(name = experiment_name, episode_num = 5000, solved_score = 195)
+                        # agent.load(name = experiment_name)
+                        # average_score = agent.test(tests_num=100, render = False)
+                        del agent
+                        del env
+                        del parameters
+
 
 if __name__ == "__main__":
     env = gym.make('CartPole-v0')
