@@ -106,12 +106,12 @@ if __name__ == "__main__":
         print(experiment_name)
         
         agent = DQNAgent(parameters = parameters)
-        # agent.train(name = experiment_name, episode_num = 10000)
-        agent.load(name = experiment_name)
-        average_score = agent.test(tests_num=1000, render = False)
-        scores.append(average_score)
+        agent.train(name = experiment_name, episode_num = 10000)
+        # agent.load(name = experiment_name)
+        # average_score = agent.test(tests_num=1000, render = False)
+        # scores.append(average_score)
         del agent
         del env
         del parameters
 
-    np.save("metrics/test_scores.npy", scores)
+    # np.save("metrics/test_scores.npy", scores)
