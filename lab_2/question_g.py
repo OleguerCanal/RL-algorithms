@@ -1,9 +1,9 @@
 from dqn_agent import DQNAgent, generate_experiment_name
 import gym
+import numpy as np
 from keras.layers import Dense, Dropout
 from keras.optimizers import Adam
 from keras.models import Sequential, model_from_json
-
 
 def get_model1(input_size, output_size, lr):
     model = Sequential()
@@ -86,6 +86,7 @@ if __name__ == "__main__":
     models = [get_model1, get_model2, get_model3, get_model4, get_model5, get_model6]
     # TODO(oleguer): Test also different loss (binnary cross entropy could work better) 
 
+    scores = []
     for i, model in enumerate(models):
         env = gym.make('CartPole-v0')
 
@@ -105,9 +106,12 @@ if __name__ == "__main__":
         print(experiment_name)
         
         agent = DQNAgent(parameters = parameters)
-        agent.train(name = experiment_name, episode_num = 10000)
-        # agent.load(name = experiment_name)
-        # average_score = agent.test(tests_num=1, render = True)
+        # agent.train(name = experiment_name, episode_num = 10000)
+        agent.load(name = experiment_name)
+        average_score = agent.test(tests_num=1000, render = False)
+        scores.append(average_score)
         del agent
         del env
         del parameters
+
+    np.save("metrics/test_scores.npy", scores)
