@@ -12,7 +12,7 @@ def get_model_1(input_size, output_size, lr):
                     kernel_initializer='he_uniform'))
     model.add(Dense(output_size, activation='linear',
                     kernel_initializer='he_uniform'))
-    model.compile(loss='rse', optimizer=Adam(lr=lr))
+    model.compile(loss='mse', optimizer=Adam(lr=lr))
     return model
 
 def get_model_2(input_size, output_size, lr):
