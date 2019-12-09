@@ -4,3 +4,4 @@ gym
 keras
 matplotlib
 tensorboard
+tqdm

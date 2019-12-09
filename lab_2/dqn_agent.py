@@ -316,15 +316,15 @@ def generate_experiment_name(params, folder = ""):
             if b != "" and len(b.split(", ")) > 1:
                 name += str(b[0])
                 name += str(b.split(", ")[1].split(")")[0])
-    return name + "_" + str(datetime.datetime).replace(" ", "_")
+    return name + "_" + str(datetime.datetime.now()).replace(" ", "_")
 
 
-def perform_experiment(models, discount_factors, learning_rates, memory_sizes, update_freq):
+def perform_experiment(models, discount_factors, learning_rates, memory_sizes, update_frequencies, episodes = 10000):
     for model in models:
         for df in discount_factors:
             for lr in learning_rates:
                 for ms in memory_sizes:
-                    for uf in update_freq:
+                    for uf in update_frequencies:
                         env = gym.make('CartPole-v0')
 
                         parameters = {
@@ -343,7 +343,7 @@ def perform_experiment(models, discount_factors, learning_rates, memory_sizes, u
                         print(experiment_name)
                         
                         agent = DQNAgent(parameters = parameters)
-                        agent.train(name = experiment_name, episode_num = 5000, solved_score = 195)
+                        agent.train(name = experiment_name, episode_num = episodes, solved_score = 195)
                         # agent.load(name = experiment_name)
                         # average_score = agent.test(tests_num=100, render = False)
                         del agent
