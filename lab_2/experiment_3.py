@@ -25,4 +25,5 @@ if __name__ == "__main__":
                         discount_factors = discount_factors,
                         learning_rates = learning_rates,
                         memory_sizes = memory_sizes,
-                        update_frequencies = update_frequencies)
+                        update_frequencies = update_frequencies,
+                        episodes = 1000)
