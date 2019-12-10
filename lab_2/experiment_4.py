@@ -59,7 +59,7 @@ def get_model_5(input_size, output_size, lr):
 
 
 if __name__ == "__main__":
-    models = [get_model_1, get_model_2, get_model_3]
+    models = [get_model_4, get_model_5]
     discount_factors = [0.95]
     learning_rates = [0.001]
     memory_sizes = [10000]
@@ -69,4 +69,5 @@ if __name__ == "__main__":
                         discount_factors = discount_factors,
                         learning_rates = learning_rates,
                         memory_sizes = memory_sizes,
-                        update_frequencies = update_frequencies)
+                        update_frequencies = update_frequencies,
+                        episodes=10000)
