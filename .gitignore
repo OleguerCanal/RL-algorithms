@@ -106,6 +106,6 @@ venv.bak/
 *.vscode/
 models/
 */__pycache__
-lab_2/figures/
+# lab_2/figures/
 logs/
 metrics/
