@@ -1,74 +1,75 @@
 import numpy as np
+from keras.layers import Dense
+from keras.optimizers import Adam
+from keras.models import Sequential
+import gym
+from gaussian_process import GaussianProcess, save, load
+from dqn_agent import DQNAgent, generate_experiment_name
 import itertools as it
-from matplotlib import pyplot as plt
-import random
 
-class GaussianProcess:
+def get_model(nlayers, nunits, lr):
+    model = Sequential()
+    model.add(Dense(int(nunits), input_dim=4, activation='sigmoid',
+                    kernel_initializer='he_uniform'))
+    for i in range(int(nlayers)):
+        model.add(Dense(int(nunits), activation='sigmoid', kernel_initializer='he_uniform'))
+    model.add(Dense(2, activation='linear', kernel_initializer='he_uniform'))
+    model.compile(loss='mse', optimizer=Adam(lr=lr))
+    return model
+    
 
-    def __init__(self, space_dim):
-        # param_values[i] is a vector with all possible values for i-th parameter
-        self.known_points = np.empty((0, space_dim)) # Matrix with known points on the rows
-        self.known_values = np.empty(0) # Array with known values 
+def eval_agent(point):
+    # TODO: (Federico) This is a mess, find a better way to convert parameters
+    # point = [df, lr, memsize, updatefreq, nlayers, nunits]
+    model = get_model(point[4], point[5], point[1])
+    parameters = {"discount_factor":point[0],
+                  "learning_rate": point[1],
+                  "memory_size":point[2],
+                  "target_update_frequency":point[3],
+                  "train_start":1000,
+                  "epsilon":0.02,
+                  "batch_size":32,
+                  "env":env,
+                  "full_model":model,
+                  "model":None #TODO merge full_model and model in a single function that
+                               # takes aslo the number of layers. I didn't do it because
+                               # there may be lot of usages in the code I'm not aware of
+                 }
+    print('Evaluating at '+str(parameters)+', nlayers: '+str(point[4])+
+          ', nunits: '+str(point[5]))
+    agent = DQNAgent(parameters)
+    res = agent.train(generate_experiment_name(parameters), episode_num=1000, solved_score=195)
+    print('Evaluation result: '+str(res))
+    return res
 
-    def add_point(self, point, val):
-        # Takes the function value at the given point and updates the whole gaussian process
-        # point: vector
-        # val: scalar value correspondent to f(point)
-        # TODO: Improve dynamic increment of known_points and known_values
-        self.known_points = np.concatenate((self.known_points,np.matrix(point)))
-        self.known_values = np.concatenate((self.known_values, [val]))
-        self.K = self._kernel_mat()
-        self.K_inv = np.linalg.inv(self.K)
+save_dir = 'gp_saves'
+env = gym.make('CartPole-v0')
+discount_factors = [0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
+discount_factors.reverse()
+learning_rates = [0.001, 0.005, 0.01, 0.05, 0.1, 0.15, 0.2]
+memory_sizes = [1000, 10000, 100000]
+update_frequencies = [1, 10, 50, 100]
+n_layers = [0, 1, 2]
+n_units = [4, 8, 16, 32, 64]
 
-        
-    def predict(self, points):
-        # points: matrix with points on the rows
-        # Returns: matrix with predicted mean and covariance for the given points on the rows
-        n_known_points = self.known_points.shape[0]
-        n_predict_points = points.shape[0]
-        prediction = np.empty((n_predict_points, 2))
-        for point_idx in range(n_predict_points): 
-            point = points[point_idx]
-            # Build vector k = kernel(x*, x_n)
-            k = np.empty(n_known_points)
-            for i in range(n_known_points):
-                k[i] = self._kernel_func(point, self.known_points[i])
-            c = self._kernel_func(point, point) 
-            mu = k.dot(self.K_inv).dot(self.known_values)
-            sigma = c - k.T.dot(self.K_inv).dot(k)
-            prediction[point_idx] = [mu, sigma]
-        return prediction
+param_space = [discount_factors, learning_rates, memory_sizes,
+               update_frequencies, n_layers, n_units]
 
-    def _kernel_mat(self):
-        # Computes the kernel matrix K for the known points
-        K = np.empty((self.known_points.shape[0], self.known_points.shape[0]))
-        for i, point_i in enumerate(self.known_points):
-            for j, point_j in enumerate(self.known_points):
-                K[i,j] = self._kernel_func(point_i, point_j)
-        return K
+gp = GaussianProcess(space_dim=len(param_space), length_scale=100)
+# Uncomment this to start from saved values
+#known_points, known_values = load('saved_evaluation')
+#gp.add_points(known_points, known_values)
+#eval_point = gp.most_likely_max(param_space)
+eval_point = [discount_factors[0],
+              learning_rates[0],
+              memory_sizes[0],
+              update_frequencies[0],
+              n_layers[0],
+              n_units[0]]
 
-    def _kernel_func(self, point_i, point_j):
-        # TODO: (Federico) vectorization
-        # TODO: (Federico) how do we set/decide these parameters?
-        sigma_k = 1
-        l = 1
-        return sigma_k**2 * np.exp(-np.linalg.norm(point_i - point_j)**2/(2*l**2))
-
-
-
-
-
-
-if __name__ == "__main__":
-    x = np.linspace(-2, 2, 1000)
-    y = np.exp(x)
-
-
-    gp = GaussianProcess(1)
-    for index in random.sample(range(x.shape[0]), 10):
-        gp.add_point(x[index], y[index])
-
-    prediction = gp.predict(x)
-    plt.plot(x, prediction[:,0], label="predicted")   
-    plt.plot(x, y, label="real")   
-    plt.show()
+while True:
+    val = eval_agent(eval_point)
+    gp.add_points([eval_point], [val])
+    save(save_dir,gp.known_points, gp.known_values)
+    candidate_max = gp.most_likely_max(param_space)
+    eval_point = candidate_max

@@ -10,10 +10,11 @@ from pathlib import Path
 
 class GaussianProcess:
 
-    def __init__(self, space_dim=None):
+    def __init__(self, space_dim=None, length_scale=1):
         self.known_points = None # Matrix with known points on the rows
         self.known_values = np.empty(0) # Array with known values 
-        self.noise_kernel = 0.000001
+        self.noise_kernel = 0.1
+        self.length_scale = length_scale
         if space_dim is not None:
             self.known_points = np.empty((0, space_dim)) 
 
@@ -46,7 +47,7 @@ class GaussianProcess:
             k = np.array([self._kernel_func(point, x) for x in self.known_points])
             c = self._kernel_func(point, point) + self.noise_kernel**2
             mu = k.dot(self.K_inv).dot(self.known_values)
-            sigma = c - k.T.dot(self.K_inv).dot(k)
+            sigma = c - k.dot(self.K_inv).dot(k)
             prediction[point_idx] = [mu, sigma]
         return prediction
 
@@ -55,9 +56,9 @@ class GaussianProcess:
         #        Predicted maximum will be searched in the cartesian product of all these lists
         # return: the parameters that have the highest probability of being a max
         cur_max_val = np.max(self.known_values)
-        combinations = list(it.product(*space)) # matrix with all possible combinations on the rows
+        combinations = list(it.product(*space)) # The whole search space
         for point in self.known_points: # We're not going to search in known points
-            combinations.remove(point)
+            combinations.remove(tuple(point))
         combinations = np.array(combinations)
 
         predicted = self.predict(combinations)
@@ -69,14 +70,9 @@ class GaussianProcess:
             if p_over_max > max_p:
                 max_p = p_over_max
                 max_idx = index
-            elif p_over_max == max_p:
-                if predicted[index, 0] > predicted[max_idx, 0]:
+            elif p_over_max == max_p: # Can happen bc. of precision errors in cdf
+                if predicted[index, 0] > predicted[max_idx, 0]: # Take max mu
                     max_idx = index
-
-        cur_max_point, cur_max_val = self.get_max()
-        print('Most likely max is at '+str(combinations[max_idx]))
-        print("Current max is at x: "+str(cur_max_point)+" with value: "+str(cur_max_val))
-        print("best "+str(predicted[max_idx])+" with p "+str(max_p))
         return combinations[max_idx]
 
     def get_max(self):
@@ -93,11 +89,11 @@ class GaussianProcess:
         return K
 
     def _kernel_func(self, point_i, point_j):
-        # TODO: (Federico) vectorization
-        # TODO: (Federico) how do we set/decide these parameters?
-        sigma_k = 1
-        l = 10
-        return sigma_k**2 * np.exp(-np.linalg.norm(point_i - point_j)**2/(2*l**2))
+        # TODO: (Federico) vectorization ?
+        # TODO: (Federico) how do we set sigma?
+        sigma_k = 0.01
+        return sigma_k**2 * np.exp(-np.linalg.norm(point_i - point_j)**2
+                                   /(2*self.length_scale**2))
 
 
 def save(dirname, known_points, known_values):
@@ -112,6 +108,8 @@ def load(dirname):
     known_values = np.load(dirname+"/known_values.npy")
     return known_points, known_values
 
+
+# Testing with a known function 
 if __name__ == "__main__":
     x = np.linspace(-10, 10, 1000)
     y = np.exp(x)
