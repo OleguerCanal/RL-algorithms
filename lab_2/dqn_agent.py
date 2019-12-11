@@ -21,10 +21,10 @@ class DQNAgent:
         self.discount_factor = parameters["discount_factor"] 
         self.learning_rate = parameters["learning_rate"]
         self.epsilon = parameters["epsilon"]
-        self.batch_size = parameters["batch_size"]
-        self.memory_size = parameters["memory_size"]
-        self.train_start = parameters["train_start"]
-        self.target_update_frequency = parameters["target_update_frequency"]
+        self.batch_size = int(parameters["batch_size"])
+        self.memory_size = int(parameters["memory_size"])
+        self.train_start = int(parameters["train_start"])
+        self.target_update_frequency = int(parameters["target_update_frequency"])
 
         # Private vars
         env = parameters["env"]
@@ -41,6 +41,9 @@ class DQNAgent:
             self.target_model = parameters["model"](input_size = env.observation_space.shape[0],
                                                     output_size = env.action_space.n,
                                                     lr = parameters["learning_rate"])
+        elif "full_model" in parameters:
+            self.model = parameters["full_model"]
+            self.target_model = copy.deepcopy(self.model)
         else:
             self.model = self.build_model() 
             self.target_model = self.build_model()
@@ -100,7 +103,8 @@ class DQNAgent:
         test_states = self.__sample_states(test_states_num)  # Sample random states for plotting
         # max_q_mean = np.zeros((episode_num,1))
         
-        scores = np.zeros(episode_num)
+        #scores = np.zeros(episode_num)
+        scores = []
         t = trange(episode_num, desc='Bar desc', leave=True)
         for e in t:
             score = 0
@@ -117,8 +121,9 @@ class DQNAgent:
 
                 if done:
                     # Append score tracking
-                    scores[e] = score
-
+                    #scores[e] = score
+                    scores.append(score)
+            
                     # Save model and scores
                     self.save(name)
                     np.save("metrics/" + str(name) + "_scores.npy", scores)  # TODO(oleguer): Remove this
@@ -156,6 +161,7 @@ class DQNAgent:
                             # self.__plot_data(episodes,scores,max_q_mean[:e+1])
                             break
         # self.__plot_data(episodes, scores, max_q_mean)
+        return np.mean(scores[-min(100, len(scores)):])
 
     def test(self, tests_num, render = False):
         rewards = np.zeros(tests_num)
@@ -305,8 +311,14 @@ def generate_experiment_name(params, folder = ""):
     name += "_ms-" + str(params["memory_size"])
     name += "_uf-" + str(params["target_update_frequency"])
 
-    model = params["model"](params["env"].observation_space.shape[0], params["env"].action_space.n, 0.1)
-    if model != None:
+    model = None
+    if params["model"] != None:
+        model = params["model"](params["env"].observation_space.shape[0],
+                                params["env"].action_space.n, 0.1)
+    if params["full_model"] != None:
+        model = params["full_model"]
+    
+    if model is not None:
         stringlist = []
         model.summary(print_fn=lambda x: stringlist.append(x))
         short_model_summary = "\n".join(stringlist)
@@ -350,6 +362,15 @@ def perform_experiment(models, discount_factors, learning_rates, memory_sizes, u
                         del env
                         del parameters
 
+def create_model(nlayers, nunits, lr):
+    model = Sequential()
+    model.add(Dense(int(nunits), input_dim=4, activation='sigmoid',
+                    kernel_initializer='he_uniform'))
+    for i in range(nlayers):
+        model.add(Dense(int(nunits), activation='sigmoid', kernel_initializer='he_uniform'))
+    model.add(Dense(2, activation='linear', kernel_initializer='he_uniform'))
+    model.compile(loss='mse', optimizer=Adam(lr=lr))
+    return model
 
 if __name__ == "__main__":
     env = gym.make('CartPole-v0')
@@ -364,14 +385,16 @@ if __name__ == "__main__":
         "epsilon": 0.02, # Fixed
         "batch_size": 32,  # Fixed
         "train_start": 1000, # Fixed
-        "model": None
+        "model": None,
+        "full_model": create_model(3, 32, 0.005)
     }
 
     experiment_name = generate_experiment_name(parameters)
     print(experiment_name)
     
     agent = DQNAgent(parameters = parameters)
-    # agent.train(name = experiment_name, episode_num = 10000)
-    agent.load(name = experiment_name)
+    train_score = agent.train(name = experiment_name, episode_num = 1000)
+    #agent.load(name = experiment_name)
 
-    average_score = agent.test(tests_num=1, render = True)
+    test_score = agent.test(tests_num=100, render = False)
+    print('train score: '+str(train_score)+', test score: '+str(test_score))
