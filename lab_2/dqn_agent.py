@@ -159,7 +159,7 @@ class DQNAgent:
                         if np.mean(scores[-min(100, len(scores)):]) >= solved_score:
                             print("Solved after", e-100, "episodes")
                             # self.__plot_data(episodes,scores,max_q_mean[:e+1])
-                            break
+                            return np.mean(scores[-min(100, len(scores)):])
         # self.__plot_data(episodes, scores, max_q_mean)
         return np.mean(scores[-min(100, len(scores)):])
 
