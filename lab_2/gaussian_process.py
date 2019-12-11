@@ -6,15 +6,18 @@ from tqdm import tqdm
 from matplotlib.animation import FuncAnimation
 import time
 import scipy.stats
+import scipy.optimize
 from pathlib import Path
+import math
 
 class GaussianProcess:
 
     def __init__(self, space_dim=None, length_scale=1, noise=0.1, standardize=True):
         self.known_points = None # Matrix with known points on the rows
         self.known_values = np.empty(0) # Array with known values 
-        self.noise_kernel = 0.1
+        self.noise_kernel = noise
         self.length_scale = length_scale
+        self.sigma_kernel = 1
         self.standardize = standardize
         if space_dim is not None:
             self.known_points = np.empty((0, space_dim)) 
@@ -33,6 +36,14 @@ class GaussianProcess:
         self.K = self._kernel_mat()
         print("Inverting Kernel")
         self.K_inv = np.linalg.inv(self.K)
+        
+       # guess = np.random.uniform(0, 1, size=3)
+       # bounds = [(0, None), (0, None), (0, None)]
+       # opt = scipy.optimize.minimize(self._loss, guess, method='CG', jac=self._gradient)
+       # hyperparams = opt.x
+       # self.length_scale = hyperparams[0]
+       # self.noise_kernel = hyperparams[1]
+       # self.sigma_kernel = hyperparams[2]
 
         
     def predict(self, points):
@@ -75,8 +86,9 @@ class GaussianProcess:
         combinations = list(it.product(*space)) # The whole search space
         for point in self.known_points: # We're not going to search in known points
             combinations.remove(tuple(point))
-        combinations = np.array(combinations)
-        scaled_combinations = combinations / np.max(combinations, axis=0) # scaling 
+        scaled_combinations = np.array(combinations)
+        if self.standardize:
+            scaled_combinations = self._scale_points(combinations)
 
         predicted = self.predict(scaled_combinations)
         max_idx = None
@@ -90,6 +102,11 @@ class GaussianProcess:
             elif p_over_max == max_p: # Can happen bc. of precision errors in cdf
                 if predicted[index, 0] > predicted[max_idx, 0]: # Take max mu
                     max_idx = index
+        print('Probability of max '+str(max_p))
+        if max_idx is None:
+            print('DIOCANE PORCO SCHIFOSO')
+            print(predicted)
+            exit()
         return combinations[max_idx]
 
     def get_max(self):
@@ -99,7 +116,7 @@ class GaussianProcess:
     def _scale_points(self, points):
         # Returns the known_point matrix in which points are scaled to [-1, 1]
         # in each dimension
-        return points / np.max(np.abs(points), axis=0)
+        return np.where(points == 0, points, points / np.max(np.abs(points), axis=0))
 
     def _scale_targets(self):
         # Returns the known_values as a zero mean array
@@ -122,11 +139,38 @@ class GaussianProcess:
     def _kernel_func(self, point_i, point_j):
         # TODO: (Federico) vectorization ?
         # TODO: (Federico) how do we set sigma?
-        sigma_k = 1
-        return sigma_k**2 * np.exp(-np.linalg.norm(point_i - point_j)**2
-                                   /(2*self.length_scale**2))
+        res = self.sigma_kernel**2 *\
+                np.exp(-np.linalg.norm(point_i - point_j)**2/(2*self.length_scale**2))
+        return res
 
+    def _loss(self, hyperparams):
+        # Computes the negative log probability of the targets given the
+        # kernel hyperparameters
+        # hyperparams: [length_scale, noise_kernel, sigma_kernel]
+        scaled_targets = self._scale_targets()
+        return 0.5 * np.log(np.linalg.det(self.K)) - 0.5 * scaled_targets.dot(self.K_inv).dot(scaled_targets)
 
+    def _gradient(self, hyperparams):
+        scaled_points = self._scale_points(self.known_points)
+        scaled_targets = self._scale_targets()
+        dK_dsigmak = 2 * self.K / self.sigma_kernel
+        dK_dnoise = 2 * self.noise_kernel * np.identity(self.K.shape[0])
+        dexp_dl = np.empty(self.K.shape)
+        for i, point_i in enumerate(scaled_points):
+            for j, point_j in enumerate(scaled_points):
+                dexp_dl[i,j] = np.linalg.norm(point_i - point_j) ** 2
+        dK_dl = (self.K * dexp_dl) / (self.length_scale **3)
+
+        dp_dl = -0.5*np.trace(self.K_inv.dot(dK_dl))+0.5*\
+                scaled_targets.dot(self.K_inv).dot(dK_dl).dot(self.K_inv).dot(scaled_targets)
+        dp_dsigmak = -0.5*np.trace(self.K_inv.dot(dK_dsigmak))+0.5*\
+                scaled_targets.dot(self.K_inv).dot(dK_dsigmak)\
+                .dot(self.K_inv).dot(scaled_targets)
+        dp_dnoise = -0.5*np.trace(self.K_inv.dot(dK_dnoise))+0.5*\
+                scaled_targets.dot(self.K_inv).dot(dK_dnoise).dot(self.K_inv).dot(scaled_targets)
+        grad = -np.array([dp_dl, dp_dnoise, dp_dsigmak])
+        return grad
+    
 def save(dirname, known_points, known_values):
     # Save the known points and values in the given directory.
     Path(dirname+"/known_points.npy").touch()
@@ -143,6 +187,7 @@ def load(dirname):
 # Testing with a known function 
 if __name__ == "__main__":
     x = np.linspace(-10, 10, 1000)
+    x_scaled = x / np.max(x)
     y = np.exp(x)
     gp = GaussianProcess(length_scale=0.5, noise=0.1)
 
