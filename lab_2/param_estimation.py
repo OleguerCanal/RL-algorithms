@@ -55,7 +55,7 @@ n_units = [4, 8, 16, 32, 64]
 param_space = [discount_factors, learning_rates, memory_sizes,
                update_frequencies, n_layers, n_units]
 
-gp = GaussianProcess(space_dim=len(param_space), length_scale=1000)
+gp = GaussianProcess(space_dim=len(param_space), length_scale=0.5, noise=0.1, standardize=True)
 # Uncomment this to start from saved values
 #known_points, known_values = load(save_dir)
 #gp.add_points(known_points, known_values)
