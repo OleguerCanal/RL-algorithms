@@ -15,10 +15,10 @@ while not done:
     
     action = env.action_space.noop()
 
-    action['camera'] = [0, 0.03*obs["compassAngle"]]
+    # action['camera'] = [-0.1, 0]
     action['back'] = 0
     action['forward'] = 1
-    action['jump'] = 1
+    action['jump'] = 0
     action['attack'] = 1
 
     obs, reward, done, info = env.step(

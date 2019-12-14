@@ -159,7 +159,7 @@ class DQNAgent:
                         if np.mean(scores[-min(100, len(scores)):]) >= solved_score:
                             print("Solved after", e-100, "episodes")
                             # self.__plot_data(episodes,scores,max_q_mean[:e+1])
-                            break
+                            return
         # self.__plot_data(episodes, scores, max_q_mean)
         return np.mean(scores[-min(100, len(scores)):])
 
@@ -315,7 +315,7 @@ def generate_experiment_name(params, folder = ""):
     if params["model"] != None:
         model = params["model"](params["env"].observation_space.shape[0],
                                 params["env"].action_space.n, 0.1)
-    if params["full_model"] != None:
+    if "full_model" in params.keys() and params["full_model"] != None:
         model = params["full_model"]
     
     if model is not None:
