@@ -1,4 +1,6 @@
-# KTH Reinforcement Learning Assingments (EL2805)
+# Reinforcement Learning Algorithms Implementations
+
+KTH Reinforcement Learning (EL2805) 2019 coding assignments
 
 ## LAB 1
 
