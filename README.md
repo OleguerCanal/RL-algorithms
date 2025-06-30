@@ -1,6 +1,6 @@
 # Reinforcement Learning Algorithms Implementations
 
-KTH Reinforcement Learning (EL2805) 2019 coding assignments. As all my other repos, this is more an exercice for me to understand the algorithms than useful code. Hope it also helps you!
+KTH Reinforcement Learning (EL2805) 2019 coding assignments. As all my other repos, this is more an exercise for me to understand the algorithms rather than useful code. Hope it also helps you!
 
 ## LAB 1
 
